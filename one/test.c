@@ -1,0 +1,76 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "syjson.h"
+
+static int main_result = 0;
+static int test_count = 0;
+static int test_pass = 0;
+
+#define EXPECT_EQ_BASE(equlity, expect, actual, format)\
+		do{\
+			test_count++;\
+			if(equlity)\
+				test_pass++;\
+			else\
+			{\
+				fprintf(stderr, "%s:%d: 想要的类型:"format" 实际的类型:"format"\n", __FILE__, __LINE__, expect, actual);\
+				main_result++;\
+			}\
+		} while(0)
+
+#define EXPECT_EQ_INT(expect, actual) EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%d")
+//测试NULL类型数据
+static void test_parse_null()
+{
+	syjson_value v;
+	v.type = SYJSON_FALSE;
+	EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "null"));
+	EXPRCT_EQ_INT(SYJSON_NULL, syjson_get_type($v));
+}
+//测试错误空数据
+static void test_parse_expect_value()
+{
+	syjson_value v;
+	v.type = SYJSON_TRUE;
+	EXPECT_EQ_INT(SYJSON_PARSE_EXPECT_VALUE, syjson_parse(&v, ""));
+	EXPRCT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));
+
+	v.type = SYJSON_TRUE;
+	EXPECT_EQ_INT(SYJSON_PARSE_EXPECT_VALUE, syjson_parse(&v, " "));
+	EXPECT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));
+}
+//不能解析的数据
+static void test_parse_invalid_value()
+{
+	syjson_value v;
+	v.type = SYJSON_TRUE;
+	EXPECT_EQ_INT(SYJSON_PARSE_INVALID_VALUE, syjson_parse(&v, "nu"));
+	EXPECT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));
+
+	v.type = SYJSON_FALSE;
+	EXPECT_EQ_INT(SYJSON_PARSE_INVALID_VALUE, syjson_parse(&v, "hehe"));
+	EXPRCT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));
+}
+//json格式错误
+static void test_parse_root_not_singular()
+{
+	syjson_value v;
+	v.type = SYJSON_TRUE;
+	EXPECT_EQ_INT(SYJSON_PARSE_ROOT_NOT_SINGULAR, syjson_parse(&v, "null a"));
+	EXPECT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));
+}
+//解析函数
+static void test_parse()
+{
+	test_parse_null();
+	test_parse_expect_value();
+	test_parse_invalid_value();
+	test_parse_root_not_singular();
+}
+//主函数
+void main()
+{
+	test_parse()
+	printf("%d/%d (%3.2f%%) 通过\n", test_pass, test_count, test_pass * 100 / test_count);
+}
