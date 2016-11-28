@@ -69,8 +69,9 @@ static void test_parse()
 	test_parse_root_not_singular();
 }
 //主函数
-void main()
+int main(int argc, char** argv)
 {
 	test_parse()
 	printf("%d/%d (%3.2f%%) 通过\n", test_pass, test_count, test_pass * 100 / test_count);
+	return 1;
 }
