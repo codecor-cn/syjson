@@ -28,6 +28,22 @@ static void test_parse_null()
 	EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "null"));
 	EXPRCT_EQ_INT(SYJSON_NULL, syjson_get_type($v));
 }
+//测试FALSE类型数据
+static void test_parse_false()
+{
+	syjson_value v;
+	v.type = SYJSON_NULL;
+	EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "false"));
+	EXPRCT_EQ_INT(SYJSON_FALSE, syjson_get_type($v));
+}
+//测试TRUE类型数据
+static void test_parse_true()
+{
+	syjson_value v;
+	v.type = SYJSON_NULL;
+	EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "true"));
+	EXPRCT_EQ_INT(SYJSON_TRUE, syjson_get_type($v));
+}
 //测试错误空数据
 static void test_parse_expect_value()
 {
@@ -64,6 +80,8 @@ static void test_parse_root_not_singular()
 static void test_parse()
 {
 	test_parse_null();
+	test_parse_true();
+	test_parse_false();
 	test_parse_expect_value();
 	test_parse_invalid_value();
 	test_parse_root_not_singular();
