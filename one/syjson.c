@@ -32,7 +32,7 @@ static int syjson_parse_null(syjson_content* c, syjson_value* v)
 static int syjson_parse_false(syjson_content* c, syjson_value* v)
 {
 	EXPECT(c, 'f');
-	if(c->json[0] != 'a' || c->json[1] != 'l' || c->json[0] != 's' || c->json[0] != 'e')
+	if(c->json[0] != 'a' || c->json[1] != 'l' || c->json[2] != 's' || c->json[3] != 'e')
 		return SYJSON_PARSE_INVALID_VALUE;
 	c->json += 4;
 	v->type = SYJSON_FALSE;
@@ -42,12 +42,13 @@ static int syjson_parse_false(syjson_content* c, syjson_value* v)
 static int syjson_parse_true(syjson_content* c, syjson_value* v)
 {
 	EXPECT(c, 't');
-	if(c->json[0] != 'r' || c->json[1] != 'u' || c->json[0] != 'e')
+	if(c->json[0] != 'r' || c->json[1] != 'u' || c->json[2] != 'e')
 		return SYJSON_PARSE_INVALID_VALUE;
 	c->json += 3;
 	v->type = SYJSON_FALSE;
 	return SYJSON_PARSE_OK;
 }
+//值之后空白
 static int syjson_parse_root_not_singular(syjson_content* c)
 {
 	syjson_parse_whitespace(&c);
@@ -68,20 +69,20 @@ static int syjson_parse_value(syjson_content* c, syjson_value* v)
 		default: return SYJSON_PARSE_INVALID_VALUE;
 	}
 }
-
-//对外函数入口
 //json库入口
 int syjson_parse(syjson_value* v, const char* json)
 {
 	syjson_content c;
 	assert(v != NULL);
+	int result;
 	c.json = json;
 	v->type = SYJSON_NULL;
 	syjson_parse_whitespace(&c);
-	if(SYJSON_PARSE_OK == syjson_parse_value(&c, v))
+	result = syjson_parse_value(&c, v);
+	if(SYJSON_PARSE_OK == result)
 		return syjson_parse_root_not_singular(&c);
 	else
-		return SYJSON_PARSE_OK;
+		return result;
 }
 //返回json数据类型
 syjson_type syjson_get_type(const syjson_value* v)
