@@ -27,7 +27,7 @@ static void test_parse_null()
 	syjson_value v;
 	v.type = SYJSON_FALSE;
 	EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "null"));
-	EXPRCT_EQ_INT(SYJSON_NULL, syjson_get_type($v));
+	EXPRCT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));
 }
 //测试FALSE类型数据
 static void test_parse_false()
@@ -35,7 +35,7 @@ static void test_parse_false()
 	syjson_value v;
 	v.type = SYJSON_NULL;
 	EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "false"));
-	EXPRCT_EQ_INT(SYJSON_FALSE, syjson_get_type($v));
+	EXPRCT_EQ_INT(SYJSON_FALSE, syjson_get_type(&v));
 }
 //测试TRUE类型数据
 static void test_parse_true()
@@ -43,7 +43,7 @@ static void test_parse_true()
 	syjson_value v;
 	v.type = SYJSON_NULL;
 	EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "true"));
-	EXPRCT_EQ_INT(SYJSON_TRUE, syjson_get_type($v));
+	EXPRCT_EQ_INT(SYJSON_TRUE, syjson_get_type(&v));
 }
 //测试数字类型
 #define TEST_NUMBER(expect, json)\
@@ -75,48 +75,67 @@ static void test_parse_number()
 	TEST_NUMBER(1.234E-10, "1.234E-10");
 	TEST_NUMBER(0.0, "1e-10000");//最小数溢出
 }
-
+#define TEST_ERROR(error, json)\
+		do{\
+			syjson_value v;\
+			v.type = SYJSON_FALSE;\
+			EXPECT_EQ_INT(error, syjson_parse(&v, json);\
+			EXPECT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));\
+		}while(0)
 //测试错误空数据
 static void test_parse_expect_value()
 {
-	syjson_value v;
-	v.type = SYJSON_TRUE;
-	EXPECT_EQ_INT(SYJSON_PARSE_EXPECT_VALUE, syjson_parse(&v, ""));
-	EXPRCT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));
-
-	v.type = SYJSON_TRUE;
-	EXPECT_EQ_INT(SYJSON_PARSE_EXPECT_VALUE, syjson_parse(&v, " "));
-	EXPECT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));
+	TEST_ERROR(SYJSON_PARSE_EXPECT_VALUE, "");
+	TEST_ERROR(SYJSON_PARSE_EXPECT_VALUE, " ");
 }
 //不能解析的数据
 static void test_parse_invalid_value()
 {
-	syjson_value v;
-	v.type = SYJSON_TRUE;
-	EXPECT_EQ_INT(SYJSON_PARSE_INVALID_VALUE, syjson_parse(&v, "nu"));
-	EXPECT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));
+	TEST_ERROR(SYJSON_PARSE_EXPECT_VALUE, "nul");
+	TEST_ERROR(SYJSON_PARSE_EXPECT_VALUE, "??");
 
-	v.type = SYJSON_FALSE;
-	EXPECT_EQ_INT(SYJSON_PARSE_INVALID_VALUE, syjson_parse(&v, "hehe"));
-	EXPRCT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));
+#if 0
+	//invalid number
+	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "+0");
+	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "+1");
+	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, ".123");
+	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "1.");
+	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "INF");
+	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "inf");
+	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "NAN");
+	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "nan");
+#endif
 }
 //json格式错误
 static void test_parse_root_not_singular()
 {
-	syjson_value v;
-	v.type = SYJSON_TRUE;
-	EXPECT_EQ_INT(SYJSON_PARSE_ROOT_NOT_SINGULAR, syjson_parse(&v, "null a"));
-	EXPECT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));
+	TEST_ERROR(SYJSON_PARSE_ROOT_NOT_SINGULAR, "null a");
+
+#if 0
+	TEST_ERROR(LEPT_PARSE_ROOT_NOT_SINGULAR, "0123");//0之后只能是点或者为空
+	TEST_ERROR(LEPT_PARSE_ROOT_NOT_SINGULAR, "0x0");
+	TEST_ERROR(LEPT_PARSE_ROOT_NOT_SINGULAR, "0x123");
+#endif
 }
-//解析函数
+//测试数字类型溢出
+static void test_parse_number_too_big()
+{
+	TEST_ERROR(SYJSON_PARSE_NUMBER_TOO_BIG, "1e999");
+	TEST_ERROR(SYJSON_PARSE_NUMBER_TOO_BIG, "-1e999");
+}
+//测试函数入口
 static void test_parse()
 {
+	//数据错误
 	test_parse_null();
 	test_parse_true();
 	test_parse_false();
+	test_parse_number();
+	//函数错误
 	test_parse_expect_value();
 	test_parse_invalid_value();
 	test_parse_root_not_singular();
+	test_parse_number_too_big();
 }
 //主函数
 int main(int argc, char** argv)

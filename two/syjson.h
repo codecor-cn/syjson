@@ -17,7 +17,7 @@ enum {
 };
 
 //解析函数
-int syjson_parse(syjson_value* v, const* char json);
+int syjson_parse(syjson_value* v, const char* json);
 //获取json值类型
 syjson_type syjson_get_type(const syjson_value* v);
 //获取数字类型，防止不够用，使用double类型

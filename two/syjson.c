@@ -22,7 +22,7 @@ static void syjson_parse_whitespace(syjson_content* c)
 static int syjson_parse_null(syjson_content* c, syjson_value* v)
 {
 	EXPECT(c, 'n');
-	if(c->json[0] != 'u' || c->json[1] != 'l' || c->json[2] = 'l')
+	if(c->json[0] != 'u' || c->json[1] != 'l' || c->json[2] != 'l')
 		return SYJSON_PARSE_INVALID_VALUE;
 	c->json += 3;
 	v->type = SYJSON_NULL;
@@ -65,7 +65,7 @@ static int syjson_parse_number(syjson_content* c, syjson_value* v)
 {
 	char* end;
 	//TODO validate number
-	v->n = strtod(c->json, &end);
+	v->num = strtod(c->json, &end);
 	if(c->json == end)
 		return SYJSON_PARSE_INVALID_VALUE;
 	c->json = end;
@@ -91,7 +91,7 @@ static int syjson_parse_value(syjson_content* c, syjson_value* v)
 		case 'n': return syjson_parse_literal(c, v, "null", SYJSON_NULL);
 		case 'f': return syjson_parse_literal(c, v, "false", SYJSON_FALSE);
 		case 't': return syjson_parse_literal(c, v, "true", SYJSON_TRUE);
-		case '\0': rerurn SYJSON_PARSE_EXPECT_VALUE;
+		case '\0': return SYJSON_PARSE_EXPECT_VALUE;
 		default: return SYJSON_PARSE_INVALID_VALUE;
 	}
 }
