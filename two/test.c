@@ -53,6 +53,28 @@ static void test_parse_true()
 		EXPECT_EQ_INT(SYJSON_NUM, syjson_get_type(&v));\
 		EXPECT_EQ_DOUBLE(expect, syjson_get_num(&v));\
 	}while(0)
+//测试解析数字
+static void test_parse_number()
+{
+	TEST_NUMBER(0.0, "0");
+	TEST_NUMBER(0.0, "-0");
+	TEST_NUMBER(0.0, "-0.0");
+	TEST_NUMBER(1.0, "1");
+	TEST_NUMBER(-1.0, "-1");
+	TEST_NUMBER(1.5, "1.5");
+	TEST_NUMBER(-1.5, "-1.5");
+	TEST_NUMBER(3.1416, "3.1416");
+	TEST_NUMBER(1E10, "1E10");
+	TEST_NUMBER(1e10, "1e10");
+	TEST_NUMBER(1E-10, "1E-10");
+	TEST_NUMBER(-1E10, "-1E10");
+	TEST_NUMBER(-1e10, "-1e10");
+	TEST_NUMBER(-1E+10, "-1E+10");
+	TEST_NUMBER(-1E-10, "-1E-10");
+	TEST_NUMBER(1.234E+10, "1.234E+10");
+	TEST_NUMBER(1.234E-10, "1.234E-10");
+	TEST_NUMBER(0.0, "1e-10000");//最小数溢出
+}
 
 //测试错误空数据
 static void test_parse_expect_value()
