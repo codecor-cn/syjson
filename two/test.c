@@ -94,7 +94,7 @@ static void test_parse_invalid_value()
 	TEST_ERROR(SYJSON_PARSE_EXPECT_VALUE, "nul");
 	TEST_ERROR(SYJSON_PARSE_EXPECT_VALUE, "??");
 
-#if 0
+#if 1
 	//invalid number
 	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "+0");
 	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "+1");
@@ -111,10 +111,10 @@ static void test_parse_root_not_singular()
 {
 	TEST_ERROR(SYJSON_PARSE_ROOT_NOT_SINGULAR, "null a");
 
-#if 0
-	TEST_ERROR(LEPT_PARSE_ROOT_NOT_SINGULAR, "0123");//0之后只能是点或者为空
-	TEST_ERROR(LEPT_PARSE_ROOT_NOT_SINGULAR, "0x0");
-	TEST_ERROR(LEPT_PARSE_ROOT_NOT_SINGULAR, "0x123");
+#if 1
+	TEST_ERROR(SYJSON_PARSE_ROOT_NOT_SINGULAR, "0123");//0之后只能是点或者为空
+	TEST_ERROR(SYJSON_PARSE_ROOT_NOT_SINGULAR, "0x0");
+	TEST_ERROR(SYJSON_PARSE_ROOT_NOT_SINGULAR, "0x123");
 #endif
 }
 //测试数字类型溢出
@@ -141,6 +141,6 @@ static void test_parse()
 int main(int argc, char** argv)
 {
 	test_parse();
-	printf("%d/%d (%3.2f%%) 通过\n", test_pass, test_count, test_pass * 100 / test_count);
+	printf("%d/%d (%3.2f%%) 通过\n", test_pass, test_count, test_pass * 100.0 / test_count);
 	return 1;
 }

@@ -48,7 +48,7 @@ static int syjson_parse_true(syjson_content* c, syjson_value* v)
 	v->type = SYJSON_FALSE;
 	return SYJSON_PARSE_OK;
 }
-//重构三种类型解析
+//重构三种字面量类型解析
 static int syjson_parse_literal(syjson_content* c, syjson_value* v, const char* literal, syjson_type type)
 {
 	size_t i;
@@ -92,7 +92,7 @@ static int syjson_parse_value(syjson_content* c, syjson_value* v)
 		case 'f': return syjson_parse_literal(c, v, "false", SYJSON_FALSE);
 		case 't': return syjson_parse_literal(c, v, "true", SYJSON_TRUE);
 		case '\0': return SYJSON_PARSE_EXPECT_VALUE;
-		default: return SYJSON_PARSE_INVALID_VALUE;
+		default: return syjson_parse_number(c, v);
 	}
 }
 //json库入口
