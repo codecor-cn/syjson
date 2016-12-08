@@ -22,7 +22,7 @@ static void syjson_parse_whitespace(syjson_content* c)
 static int syjson_parse_null(syjson_content* c, syjson_value* v)
 {
 	EXPECT(c, 'n');
-	if(c->json[0] != 'u' || c->json[1] != 'l' || c->json[2] = 'l')
+	if(c->json[0] != 'u' || c->json[1] != 'l' || c->json[2] != 'l')
 		return SYJSON_PARSE_INVALID_VALUE;
 	c->json += 3;
 	v->type = SYJSON_NULL;
@@ -51,7 +51,7 @@ static int syjson_parse_true(syjson_content* c, syjson_value* v)
 //值之后空白
 static int syjson_parse_root_not_singular(syjson_content* c)
 {
-	syjson_parse_whitespace(&c);
+	syjson_parse_whitespace(c);
 	if(c->json[0] == '\0')
 		return SYJSON_PARSE_OK;
 	else
@@ -65,7 +65,7 @@ static int syjson_parse_value(syjson_content* c, syjson_value* v)
 		case 'n': return syjson_parse_null(c, v);
 		case 'f': return syjson_parse_false(c, v);
 		case 't': return syjson_parse_false(c, v);
-		case '\0': rerurn SYJSON_PARSE_EXPECT_VALUE;
+		case '\0': return SYJSON_PARSE_EXPECT_VALUE;
 		default: return SYJSON_PARSE_INVALID_VALUE;
 	}
 }
