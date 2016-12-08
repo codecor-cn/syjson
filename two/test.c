@@ -27,7 +27,7 @@ static void test_parse_null()
 	syjson_value v;
 	v.type = SYJSON_FALSE;
 	EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "null"));
-	EXPRCT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));
+	EXPECT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));
 }
 //测试FALSE类型数据
 static void test_parse_false()
@@ -35,7 +35,7 @@ static void test_parse_false()
 	syjson_value v;
 	v.type = SYJSON_NULL;
 	EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "false"));
-	EXPRCT_EQ_INT(SYJSON_FALSE, syjson_get_type(&v));
+	EXPECT_EQ_INT(SYJSON_FALSE, syjson_get_type(&v));
 }
 //测试TRUE类型数据
 static void test_parse_true()
@@ -43,7 +43,7 @@ static void test_parse_true()
 	syjson_value v;
 	v.type = SYJSON_NULL;
 	EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "true"));
-	EXPRCT_EQ_INT(SYJSON_TRUE, syjson_get_type(&v));
+	EXPECT_EQ_INT(SYJSON_TRUE, syjson_get_type(&v));
 }
 //测试数字类型
 #define TEST_NUMBER(expect, json)\
@@ -79,7 +79,7 @@ static void test_parse_number()
 		do{\
 			syjson_value v;\
 			v.type = SYJSON_FALSE;\
-			EXPECT_EQ_INT(error, syjson_parse(&v, json);\
+			EXPECT_EQ_INT(error, syjson_parse(&v, json));\
 			EXPECT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));\
 		}while(0)
 //测试错误空数据
@@ -140,7 +140,7 @@ static void test_parse()
 //主函数
 int main(int argc, char** argv)
 {
-	test_parse()
+	test_parse();
 	printf("%d/%d (%3.2f%%) 通过\n", test_pass, test_count, test_pass * 100 / test_count);
 	return 1;
 }

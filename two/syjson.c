@@ -77,7 +77,7 @@ static int syjson_parse_number(syjson_content* c, syjson_value* v)
 //值之后空白
 static int syjson_parse_root_not_singular(syjson_content* c)
 {
-	syjson_parse_whitespace(&c);
+	syjson_parse_whitespace(c);
 	if(c->json[0] == '\0')
 		return SYJSON_PARSE_OK;
 	else
