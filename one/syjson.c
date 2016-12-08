@@ -45,7 +45,7 @@ static int syjson_parse_true(syjson_content* c, syjson_value* v)
 	if(c->json[0] != 'r' || c->json[1] != 'u' || c->json[2] != 'e')
 		return SYJSON_PARSE_INVALID_VALUE;
 	c->json += 3;
-	v->type = SYJSON_FALSE;
+	v->type = SYJSON_TRUE;
 	return SYJSON_PARSE_OK;
 }
 //值之后空白
@@ -64,7 +64,7 @@ static int syjson_parse_value(syjson_content* c, syjson_value* v)
 	{
 		case 'n': return syjson_parse_null(c, v);
 		case 'f': return syjson_parse_false(c, v);
-		case 't': return syjson_parse_false(c, v);
+		case 't': return syjson_parse_true(c, v);
 		case '\0': return SYJSON_PARSE_EXPECT_VALUE;
 		default: return SYJSON_PARSE_INVALID_VALUE;
 	}

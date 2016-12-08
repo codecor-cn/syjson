@@ -90,6 +90,6 @@ static void test_parse()
 int main(int argc, char** argv)
 {
 	test_parse();
-	printf("%d/%d (%3.2f%%) 通过\n", test_pass, test_count, test_pass * 100 / test_count);
+	printf("%d/%d (%3.2f%%) 通过\n", test_pass, test_count, test_pass * 100.0 / test_count);
 	return 1;
 }
