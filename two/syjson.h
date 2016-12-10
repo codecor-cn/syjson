@@ -1,5 +1,5 @@
-#ifndef SYJSON_01_H__
-#define SYJSON_01_H__
+#ifndef SYJSON_H__
+#define SYJSON_H__
 
 typedef enum { SYJSON_NULL, SYJSON_TRUE, SYJSON_FALSE, SYJSON_NUM, SYJSON_STR, SYJSON_ARR, SYJSON_OBJ } syjson_type;
 
@@ -21,6 +21,6 @@ int syjson_parse(syjson_value* v, const char* json);
 //获取json值类型
 syjson_type syjson_get_type(const syjson_value* v);
 //获取数字类型，防止不够用，使用double类型
-double syjson_get_number(const syjson_value* v);
+double syjson_get_num(const syjson_value* v);
 
 #endif

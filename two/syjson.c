@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <stdlib.h>
-
 #include "syjson.h"
 
 #define EXPECT(c, ch)  do{ assert(*c->json == (ch)); c->json++; }while(0)
@@ -75,13 +74,16 @@ static int syjson_parse_number(syjson_content* c, syjson_value* v)
 
 //公共函数库
 //值之后空白
-static int syjson_parse_root_not_singular(syjson_content* c)
+static int syjson_parse_root_not_singular(syjson_content* c, syjson_value* v)
 {
 	syjson_parse_whitespace(c);
 	if(c->json[0] == '\0')
 		return SYJSON_PARSE_OK;
 	else
+	{
+		v->type = SYJSON_NULL;
 		return SYJSON_PARSE_ROOT_NOT_SINGULAR;
+	}
 }
 //解析json入口
 static int syjson_parse_value(syjson_content* c, syjson_value* v)
@@ -106,7 +108,7 @@ int syjson_parse(syjson_value* v, const char* json)
 	syjson_parse_whitespace(&c);
 	result = syjson_parse_value(&c, v);
 	if(SYJSON_PARSE_OK == result)
-		return syjson_parse_root_not_singular(&c);
+		return syjson_parse_root_not_singular(&c, v);
 	else
 		return result;
 }

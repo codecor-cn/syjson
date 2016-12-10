@@ -1,5 +1,5 @@
-#ifndef SYJSON_01_H__
-#define SYJSON_01_H__
+#ifndef SYJSON_H__
+#define SYJSON_H__
 
 typedef enum { SYJSON_NULL, SYJSON_TRUE, SYJSON_FALSE, SYJSON_NUM, SYJSON_STR, SYJSON_ARR, SYJSON_OBJ } syjson_type;
 

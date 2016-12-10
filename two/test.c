@@ -66,6 +66,7 @@ static void test_parse_number()
 	TEST_NUMBER(3.1416, "3.1416");
 	TEST_NUMBER(1E10, "1E10");
 	TEST_NUMBER(1e10, "1e10");
+	TEST_NUMBER(1E+10, "1E+10");
 	TEST_NUMBER(1E-10, "1E-10");
 	TEST_NUMBER(-1E10, "-1E10");
 	TEST_NUMBER(-1e10, "-1e10");
@@ -91,10 +92,10 @@ static void test_parse_expect_value()
 //不能解析的数据
 static void test_parse_invalid_value()
 {
-	TEST_ERROR(SYJSON_PARSE_EXPECT_VALUE, "nul");
-	TEST_ERROR(SYJSON_PARSE_EXPECT_VALUE, "??");
+	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "nul");
+	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "??");
 
-#if 1
+#if 0
 	//invalid number
 	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "+0");
 	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "+1");
@@ -111,7 +112,7 @@ static void test_parse_root_not_singular()
 {
 	TEST_ERROR(SYJSON_PARSE_ROOT_NOT_SINGULAR, "null a");
 
-#if 1
+#if 0
 	TEST_ERROR(SYJSON_PARSE_ROOT_NOT_SINGULAR, "0123");//0之后只能是点或者为空
 	TEST_ERROR(SYJSON_PARSE_ROOT_NOT_SINGULAR, "0x0");
 	TEST_ERROR(SYJSON_PARSE_ROOT_NOT_SINGULAR, "0x123");
@@ -120,8 +121,10 @@ static void test_parse_root_not_singular()
 //测试数字类型溢出
 static void test_parse_number_too_big()
 {
+#if 0
 	TEST_ERROR(SYJSON_PARSE_NUMBER_TOO_BIG, "1e999");
 	TEST_ERROR(SYJSON_PARSE_NUMBER_TOO_BIG, "-1e999");
+#endif
 }
 //测试函数入口
 static void test_parse()
