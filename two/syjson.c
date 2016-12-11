@@ -1,5 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <math.h>
 #include "syjson.h"
 
 #define EXPECT(c, ch)  do{ assert(*c->json == (ch)); c->json++; }while(0)
@@ -60,14 +62,44 @@ static int syjson_parse_literal(syjson_content* c, syjson_value* v, const char* 
 	return SYJSON_PARSE_OK;
 }
 //解析数字
+#define ISDIGIT(string) ((string) >= '0' && (string) <= '9')
+#define ISDIGIT1TO9(string) ((string) >= '1' && (string) <= '9')
 static int syjson_parse_number(syjson_content* c, syjson_value* v)
 {
-	char* end;
-	//TODO validate number
+	const char* p = c->json;
+	//负号
+	if(*p == '-') p++;
+	//整数
+	if(*p == '0') p++;
+	else
+	{
+		if(!ISDIGIT1TO9(*p)) return SYJSON_PARSE_INVALID_VALUE;
+		for(p++; ISDIGIT(*p); p++);
+	}
+	//小数
+	if(*p == '.')
+	{
+		p++;
+		if(!ISDIGIT(*p)) return SYJSON_PARSE_INVALID_VALUE;
+		for(p++; ISDIGIT(*p); p++);
+	}
+	//指数
+	if(*p == 'e' || *p == 'E')
+	{
+		p++;
+		if(*p == '-' || *p == '+') p++;
+		if(!ISDIGIT(*p)) return SYJSON_PARSE_INVALID_VALUE;
+		for(p++; ISDIGIT(*p); p++);
+	}
+
+	char* end = NULL;
+	//函数校验数字真实性
 	v->num = strtod(c->json, &end);
 	if(c->json == end)
 		return SYJSON_PARSE_INVALID_VALUE;
-	c->json = end;
+	if(errno = ERANGE && (v->num == HUGE_VAL || v->num == -HUGE_VAL))
+		return SYJSON_PARSE_NUMBER_TOO_BIG;
+	c->json = p;
 	v->type = SYJSON_NUM;
 	return SYJSON_PARSE_OK;
 }
