@@ -56,6 +56,7 @@ static void test_parse_true()
 //测试解析数字
 static void test_parse_number()
 {
+	TEST_NUMBER(0.0, "aaa");
 	TEST_NUMBER(0.0, "0");
 	TEST_NUMBER(0.0, "-0");
 	TEST_NUMBER(0.0, "-0.0");
