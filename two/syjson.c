@@ -92,11 +92,8 @@ static int syjson_parse_number(syjson_content* c, syjson_value* v)
 		for(p++; ISDIGIT(*p); p++);
 	}
 
-	char* end = NULL;
 	//函数校验数字真实性
-	v->num = strtod(c->json, &end);
-	if(c->json == end)
-		return SYJSON_PARSE_INVALID_VALUE;
+	v->num = strtod(c->json, NULL);
 	if(errno = ERANGE && (v->num == HUGE_VAL || v->num == -HUGE_VAL))
 		return SYJSON_PARSE_NUMBER_TOO_BIG;
 	c->json = p;
