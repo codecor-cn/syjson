@@ -51,7 +51,7 @@ static void test_parse_true()
 		syjson_value v;\
 		EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, json));\
 		EXPECT_EQ_INT(SYJSON_NUM, syjson_get_type(&v));\
-		EXPECT_EQ_DOUBLE(expect, syjson_get_num(&v));\
+		EXPECT_EQ_DOUBLE(expect, syjson_get_number(&v));\
 	}while(0)
 //测试解析数字
 static void test_parse_number()
@@ -75,6 +75,22 @@ static void test_parse_number()
 	TEST_NUMBER(1.234E+10, "1.234E+10");
 	TEST_NUMBER(1.234E-10, "1.234E-10");
 	TEST_NUMBER(0.0, "1e-10000");//最小数溢出
+}
+#define EXPECT_EQ_STRING(s, str, l)\
+		do{\
+			EXPECT_EQ_INT(s, str);\
+			EXPECT_EQ_INT(sizeof s, l);\
+		}while(0)
+//测试字符串
+static void test_access_string()
+{
+	syjson_value v;
+	syjson_init(&v);
+	syjson_set_string(&v, "", 0);
+	EXPECT_EQ_STRING("", syjson_get_string(&v), syjson_get_string_length(&v));
+	syjson_set_string(&v, "hello", 5);
+	EXPECT_EQ_STRING("hello", syjson_get_string(&v), syjson_get_string_length(&v));
+	syjson_free(&v);
 }
 #define TEST_ERROR(error, json)\
 		do{\

@@ -100,8 +100,28 @@ static int syjson_parse_number(syjson_content* c, syjson_value* v)
 	v->type = SYJSON_NUM;
 	return SYJSON_PARSE_OK;
 }
+//释放变量字符串空间
+static void syjson-free(syjson_vale* v)
+{
+	assert(v != NULL);
+	if(v->type == SYJSON_STR) free(v->val.str.s);
+	v->type = SYJSON_NULL;
+}
+//解析字符串
+void syjson_set_string(syjson_value* v, const char* s, size_t len)
+{
+	assert(v != NULL && (s != NULL || len == 0));
+	syjson_free(v);
+	v->val.str.s = (char*)malloc(len+1);
+	memcpy(v->val.str.s, s, len);
+	v->val.str.s[len] = '\0';
+	v->val.str.l = len;
+	v->type = SYJSON_STR;
+}
 
 //公共函数库
+#define syjson_init(v) do{(v)->type = SYJSON_NULL;}while(0)
+
 //值之后空白
 static int syjson_parse_root_not_singular(syjson_content* c, syjson_value* v)
 {
@@ -148,7 +168,7 @@ syjson_type syjson_get_type(const syjson_value* v)
 	return v->type;
 }
 //返回数字类型
-double syjson_get_num(const syjson_value* v)
+double syjson_get_number(const syjson_value* v)
 {
 	assert(v != NULL && v->type == SYJSON_NUM);
 	return v->num;
