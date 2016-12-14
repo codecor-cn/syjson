@@ -29,7 +29,7 @@ typedef struct
 	const char* json;
 	char* stack;
 	size_t size, top;
-}syjson_context;
+}syjson_content;
 
 //解析函数
 int syjson_parse(syjson_value* v, const char* json);
