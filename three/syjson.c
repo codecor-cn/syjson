@@ -121,7 +121,6 @@ void syjson_set_string(syjson_value* v, const char* s, size_t len)
 
 //公共函数库
 #define syjson_init(v) do{(v)->type = SYJSON_NULL;}while(0)
-
 //值之后空白
 static int syjson_parse_root_not_singular(syjson_content* c, syjson_value* v)
 {
