@@ -6,11 +6,6 @@
 
 #define EXPECT(c, ch)  do{ assert(*c->json == (ch)); c->json++; }while(0)
 
-typedef struct
-{
-	const char* json;
-}syjson_content;
-
 //过滤空白
 static void syjson_parse_whitespace(syjson_content* c)
 {
@@ -145,20 +140,48 @@ static int syjson_parse_value(syjson_content* c, syjson_value* v)
 		default: return syjson_parse_number(c, v);
 	}
 }
+//压栈
+static void* syjson_content_push(syjson_content* c, size_t size)
+{
+	void* ret;
+	assert(size > 0);
+	if(c->top + size >= c->size)
+	{
+		if(c->size == 0)
+			c->size = SYJSON_PARSE_STACK_INIT_SIZE;
+		while(c->top + size >= c->size)
+			c->size += c->size >> 1;
+		c->stack = (char*) realloc(c->stack, c->size);
+	}
+	ret = c->stack + c->top;
+	c->top += size;
+	return ret;
+}
+//出栈
+static void* syjson_content_pop(syjson_content* c, size_t size)
+{
+	assert(c->top >= size);
+	return c->stack + (t->top -= size);
+}
 //json库入口
 int syjson_parse(syjson_value* v, const char* json)
 {
 	syjson_content c;
-	assert(v != NULL);
 	int result;
+	assert(v != NULL);
 	c.json = json;
+	c.stack = NULL;
+	c.size = c.top = 0;
+	syjson_init(v);
 	v->type = SYJSON_NULL;
 	syjson_parse_whitespace(&c);
 	result = syjson_parse_value(&c, v);
 	if(SYJSON_PARSE_OK == result)
-		return syjson_parse_root_not_singular(&c, v);
-	else
-		return result;
+		result = syjson_parse_root_not_singular(&c, v);
+
+	assert(c.top == 0);
+	free(c.stack);
+	return result;
 }
 //返回json数据类型
 syjson_type syjson_get_type(const syjson_value* v)
