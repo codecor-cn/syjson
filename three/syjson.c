@@ -163,6 +163,32 @@ static void* syjson_content_pop(syjson_content* c, size_t size)
 	assert(c->top >= size);
 	return c->stack + (t->top -= size);
 }
+//解析字符串
+#define PUTC(c, ch) do{*(char*)syjson_content_push(c, sizeof(char)) = (ch);}while(0)
+static int syjson_parse_string(syjson_content* c, syjson_value* v)
+{
+	size_t head = c->top, len;
+	const char* p;
+	EXPECT(c, '\"');
+	p = c->json;
+	for(;;)
+	{
+		char ch = *p++;
+		switch(ch)
+		{
+			case '\"':
+				len = c->top - head;
+				syjson_set_string(v, (const char*)syjson_content_pop(c, len), len);
+				c->json = p;
+				return SYJSON_PARSE_OK;
+			case '\0':
+				c->top = head;
+				return SYJSON_PARSE_MISS_QUOTATION_MARK;
+			default:
+				PUTC(c, sh);
+		}
+	}
+}
 //json库入口
 int syjson_parse(syjson_value* v, const char* json)
 {
