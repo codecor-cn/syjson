@@ -11,7 +11,7 @@ typedef struct
 	syjson_type type;
 	union
 	{
-		struct {char* s, size_t l} str;
+		struct {char* s; size_t l;} str;
 		double num;
 	} val;
 } syjson_value;
@@ -21,7 +21,10 @@ enum {
 	SYJSON_PARSE_EXPECT_VALUE,
 	SYJSON_PARSE_INVALID_VALUE,
 	SYJSON_PARSE_ROOT_NOT_SINGULAR,
-	SYJSON_PARSE_NUMBER_TOO_BIG
+	SYJSON_PARSE_NUMBER_TOO_BIG,
+	SYJSON_PARSE_MISS_QUOTATION_MARK,
+	SYJSON_PARSE_INVALID_STRING_ESCAPE,
+	SYJSON_PARSE_INVALID_STRING_CHAR
 };
 //动态堆栈
 typedef struct
@@ -29,8 +32,10 @@ typedef struct
 	const char* json;
 	char* stack;
 	size_t size, top;
-}syjson_content;
+} syjson_content;
 
+//初始化
+#define syjson_init(v) do { (v)->type = SYJSON_NULL; } while(0)
 //解析函数
 int syjson_parse(syjson_value* v, const char* json);
 //获取json值类型
@@ -50,6 +55,6 @@ void syjson_set_boolean(syjson_value* v, int b);
 //设置数字
 void syjson_set_number(syjson_value* v, double n);
 //设置字符串
-void syjson_set_string(syjson-value* v, const char* s, size_t l);
+void syjson_set_string(syjson_value* v, const char* s, size_t l);
 
 #endif
