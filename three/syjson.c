@@ -97,12 +97,27 @@ static int syjson_parse_number(syjson_content* c, syjson_value* v)
 	v->type = SYJSON_NUM;
 	return SYJSON_PARSE_OK;
 }
-//释放变量字符串空间
-static void syjson_free(syjson_value* v)
+//释放变量字符串空间 -- 也可以是 -- 初始化变量 set_null
+void syjson_free(syjson_value* v)
 {
 	assert(v != NULL);
 	if(v->type == SYJSON_STR) free(v->val.str.s);
 	v->type = SYJSON_NULL;
+}
+//设置为真假
+void syjson_set_boolean(syjson_value* v, int boolean)
+{
+	assert(v != NULL && (boolean == SYJSON_TRUE || boolean == SYJSON_FALSE));
+	if(v->type == SYJSON_STR) free(v->val.str.s);
+	v->type = boolean;
+}
+//设置变量数字
+void syjson_set_number(syjson_value* v, double num)
+{
+	assert(v != NULL);
+	if(v->type == SYJSON_STR) free(v->val.str.s);
+	v->type = SYJSON_NUM;
+	v->val.num = num;
 }
 //解析字符串
 void syjson_set_string(syjson_value* v, const char* s, size_t len)
@@ -225,3 +240,23 @@ double syjson_get_number(const syjson_value* v)
 	assert(v != NULL && v->type == SYJSON_NUM);
 	return v->val.num;
 }
+//返回字符串长度
+size_t syjson_get_string_length(const syjson_value* v)
+{
+	assert(v != NULL && v->type == SYJSON_STR);
+	return v->val.str.l;
+}
+//返回字符串
+const char* syjson_get_string(const syjson_value* v)
+{
+	assert(v != NULL && v->type == SYJSON_STR);
+	return v->val.str.s;
+}
+
+
+
+
+
+
+
+

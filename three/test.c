@@ -203,7 +203,7 @@ static void test_access_boolean()
 	syjson_value v;
 	syjson_init(&v);
 	syjson_set_string(&v, "a", 1);
-	syjson_set_true(&v);
+	syjson_set_boolean(&v, SYJSON_TRUE);
 	EXPECT_EQ_INT(SYJSON_TRUE, syjson_get_type(&v));
 	syjson_free(&v);
 }
@@ -212,7 +212,7 @@ static void test_access_number()
 {
 	syjson_value v;
 	syjson_init(&v);
-	syjson_set_munber(&v, 123);
+	syjson_set_number(&v, 123);
 	EXPECT_EQ_INT(SYJSON_NUM, syjson_get_type(&v));
 	syjson_free(&v);
 }
