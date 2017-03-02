@@ -119,7 +119,7 @@ void syjson_set_number(syjson_value* v, double num)
 	v->type = SYJSON_NUM;
 	v->val.num = num;
 }
-//解析字符串
+//从字符串栈写入值空间
 void syjson_set_string(syjson_value* v, const char* s, size_t len)
 {
 	assert(v != NULL && (s != NULL || len == 0));
@@ -139,30 +139,38 @@ static void* syjson_content_push(syjson_content* c, size_t size)
 {
 	void* ret;
 	assert(size > 0);
+	//检查是否超出栈空间
 	if(c->top + size >= c->size)
 	{
+		//初始化栈空间
 		if(c->size == 0)
 			c->size = SYJSON_PARSE_STACK_INIT_SIZE;
+		//以一点五倍增量增加栈空间
 		while(c->top + size >= c->size)
 			c->size += c->size >> 1;
+		//申请堆内存，制作栈空间
 		c->stack = (char*) realloc(c->stack, c->size);
 	}
 	ret = c->stack + c->top;
 	c->top += size;
+	//返回栈顶地址
 	return ret;
 }
 //出栈
-static void* syjson_content_pop(syjson_content* c, size_t size)
+static void* syjson_content_pop(syjson_content* c, size_t len)
 {
-	assert(c->top >= size);
-	return c->stack + (c->top -= size);
+	assert(c->top >= len);
+	//这里的len为什么要跟head互换，直接传入head数值不行么
+	return c->stack + (c->top -= len);
 }
+//压栈操作，字符写入到新地址
+#define PUTC(c, ch) do{ *(char*)syjson_content_push(c, sizeof(char)) = (ch); }while(0)
 //解析字符串
-#define PUTC(c, ch) do{*(char*)syjson_content_push(c, sizeof(char)) = (ch);}while(0)
 static int syjson_parse_string(syjson_content* c, syjson_value* v)
 {
 	size_t head = c->top, len;
 	const char* p;
+	//检查字符串初始字符，并向后位移指针
 	EXPECT(c, '\"');
 	p = c->json;
 	for(;;)
@@ -170,15 +178,39 @@ static int syjson_parse_string(syjson_content* c, syjson_value* v)
 		char ch = *p++;
 		switch(ch)
 		{
+			//解析字符串结束，获取字符串长度，批量写入字符空间
 			case '\"':
 				len = c->top - head;
 				syjson_set_string(v, (const char*)syjson_content_pop(c, len), len);
 				c->json = p;
 				return SYJSON_PARSE_OK;
+			//解析转义
+			case '\\':
+				switch(*p++)
+				{
+					case '\"': PUTC(c, '\"'); break;
+					case '\\': PUTC(c, '\\'); break;
+					case '/': PUTC(c, '/'); break;
+					case 'b': PUTC(c, '\b'); break;
+					case 'f': PUTC(c, '\f'); break;
+					case 'n': PUTC(c, '\n'); break;
+					case 'r': PUTC(c, '\r'); break;
+					case 't': PUTC(c, '\t'); break;
+					default:
+						c->top = head;
+						return SYJSON_PARSE_INVALID_STRING_ESCAPE;
+				}
+				break;
 			case '\0':
 				c->top = head;
 				return SYJSON_PARSE_MISS_QUOTATION_MARK;
+				break;
 			default:
+				if((unsigned char)ch < 0x20)
+				{
+					c->top = head;
+					return SYJSON_PARSE_INVALID_STRING_CHAR;
+				}
 				PUTC(c, ch);
 		}
 	}
@@ -204,6 +236,7 @@ static int syjson_parse_value(syjson_content* c, syjson_value* v)
 		case 'f': return syjson_parse_literal(c, v, "false", SYJSON_FALSE);
 		case 't': return syjson_parse_literal(c, v, "true", SYJSON_TRUE);
 		case '\0': return SYJSON_PARSE_EXPECT_VALUE;
+		case '"': return syjson_parse_string(c, v);
 		default: return syjson_parse_number(c, v);
 	}
 }
@@ -233,6 +266,12 @@ syjson_type syjson_get_type(const syjson_value* v)
 {
 	assert(v != NULL);
 	return v->type;
+}
+//返回真假值，并非变量类型
+int syjson_get_boolean(const syjson_value* v)
+{
+	assert(v != NULL && (v->type == SYJSON_TRUE || v->type == SYJSON_FALSE));
+	return v->type == SYJSON_TRUE;
 }
 //返回数字类型
 double syjson_get_number(const syjson_value* v)
