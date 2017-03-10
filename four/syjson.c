@@ -165,10 +165,58 @@ static void* syjson_content_pop(syjson_content* c, size_t len)
 }
 //压栈操作，字符写入到新地址
 #define PUTC(c, ch) do{ *(char*)syjson_content_push(c, sizeof(char)) = (ch); }while(0)
+//解析字符串错误
+#define STRING_ERROR(ret) do{ c->top = head; return ret; }while(0)
+//解析JSON转码至UNICODE码点，int4字节存储
+static const char* syjson_parse_hex4(const char* p, unsigned* u)
+{
+	int i;
+	*u = 0;
+	//UNICODE基本面码点
+	for(i = 0;i < 4;i++)
+	{
+		char ch = *p++;
+		//16进制对应4位二进制
+		*u <<= 4;
+		//按位或写入数据，区分大小写
+		if      (ch >= '0' && ch <= '9') *u |= ch - '0';
+		//16进制，加上前缀十进制
+		else if (ch >= 'A' && ch <= 'F') *u |= ch - ('A' - 10);
+		else if (ch >= 'a' && ch <= 'f') *u |= ch - ('a' - 10);
+		else return NULL;
+	}
+	return p;
+}
+//UNICODE转至UTF-8编码格式
+static void syjson_encode_utf8(syjson_content* c, unsigned u)
+{
+	//unicode码点，右移位数请查阅UTF-8编码实现
+	if(u <= 0x007f)
+		PUTC(c, u & 0xff);
+	else if(u <= 0x07ff)
+	{
+		PUTC(c, ((u >> 6) & 0x1f) | 0xc0);
+		PUTC(c, ( u       & 0x3f) | 0x80);
+	}
+	else if(u <= 0xffff)
+	{
+		PUTC(c, ((u >> 12) & 0x0f) | 0xe0);
+		PUTC(c, ((u >>  6) & 0x3f) | 0x80);
+		PUTC(c, ( u        & 0x3f) | 0x80);
+	}
+	else if(u <= 0x10ffff)
+	{
+		PUTC(c, ((u >> 18) & 0x08) | 0xf0);
+		PUTC(c, ((u >> 12) & 0x3f) | 0x80);
+		PUTC(c, ((u >> 6)  & 0x3f) | 0x80);
+		PUTC(c, ( u        & 0x3f) | 0x80);
+	}
+}
 //解析字符串
 static int syjson_parse_string(syjson_content* c, syjson_value* v)
 {
 	size_t head = c->top, len;
+	unsigned u u2;
 	const char* p;
 	//检查字符串初始字符，并向后位移指针
 	EXPECT(c, '\"');
@@ -188,6 +236,30 @@ static int syjson_parse_string(syjson_content* c, syjson_value* v)
 			case '\\':
 				switch(*p++)
 				{
+					//解析UTF-8
+					case 'u':
+						//验证进制合法，并前移字符指针
+						if(!(p = syjson_parse_hex4(p, &u))
+							STRING_ERROR(SYJSON_PARSE_INVALID_UNICODE_HEX);
+						//高代理码点
+						if(u >= 0xd800 && u <= 0xdbff)
+						{
+							if(*p++ != '\\')
+								STRING_ERROR(SYJSON_PARSE_INVALID_UNICODE_SURROGATE);
+							if(*p++ != 'u')
+								STRING_ERROR(SYJSON_PARSE_INVALID_UNICODE_SURROGATE);
+							if(!(p = syjson_parse_hex4(p, &u2)))
+								STRING_ERROR(SYJSON_PARSE_INVALID_UNICODE_HEX);
+							//低代理码点
+							if(u2 < 0xdc00 || u2 > 0xdfff)
+								STRING_ERROR(SYJSON_PARSE_INVALID_UNICODE_SURROGATE);
+							//辅助平面码点合并，0x10000 至 0x10ffff，总共20bit数据，高位10bit，低位10bit
+							u =  0x10000 + (((u - 0xd800) << 10) | (u2 - 0xdc00));
+						}
+						//编码为UTF-8，并压栈
+						syjson_encode_utf8(c, u);
+					break;
+					//转义字符压栈
 					case '\"': PUTC(c, '\"'); break;
 					case '\\': PUTC(c, '\\'); break;
 					case '/': PUTC(c, '/'); break;
