@@ -216,7 +216,7 @@ static void syjson_encode_utf8(syjson_content* c, unsigned u)
 static int syjson_parse_string(syjson_content* c, syjson_value* v)
 {
 	size_t head = c->top, len;
-	unsigned u u2;
+	unsigned u, u2;
 	const char* p;
 	//检查字符串初始字符，并向后位移指针
 	EXPECT(c, '\"');
@@ -236,10 +236,19 @@ static int syjson_parse_string(syjson_content* c, syjson_value* v)
 			case '\\':
 				switch(*p++)
 				{
+					//转义字符压栈
+					case '\"': PUTC(c, '\"'); break;
+					case '\\': PUTC(c, '\\'); break;
+					case '/' : PUTC(c, '/' ); break;
+					case 'b' : PUTC(c, '\b'); break;
+					case 'f' : PUTC(c, '\f'); break;
+					case 'n' : PUTC(c, '\n'); break;
+					case 'r' : PUTC(c, '\r'); break;
+					case 't' : PUTC(c, '\t'); break;
 					//解析UTF-8
 					case 'u':
 						//验证进制合法，并前移字符指针
-						if(!(p = syjson_parse_hex4(p, &u))
+						if(!(p = syjson_parse_hex4(p, &u)))
 							STRING_ERROR(SYJSON_PARSE_INVALID_UNICODE_HEX);
 						//高代理码点
 						if(u >= 0xd800 && u <= 0xdbff)
@@ -259,18 +268,9 @@ static int syjson_parse_string(syjson_content* c, syjson_value* v)
 						//编码为UTF-8，并压栈
 						syjson_encode_utf8(c, u);
 					break;
-					//转义字符压栈
-					case '\"': PUTC(c, '\"'); break;
-					case '\\': PUTC(c, '\\'); break;
-					case '/': PUTC(c, '/'); break;
-					case 'b': PUTC(c, '\b'); break;
-					case 'f': PUTC(c, '\f'); break;
-					case 'n': PUTC(c, '\n'); break;
-					case 'r': PUTC(c, '\r'); break;
-					case 't': PUTC(c, '\t'); break;
 					default:
 						c->top = head;
-						return SYJSON_PARSE_INVALID_STRING_ESCAPE;
+						STRING_ERROR(SYJSON_PARSE_INVALID_STRING_ESCAPE);
 				}
 				break;
 			case '\0':

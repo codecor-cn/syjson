@@ -116,6 +116,13 @@ static void test_parse_string()
 	TEST_STRING("hello", "\"hello\"");
 	TEST_STRING("hello\nworld", "\"hello\\nworld\"");
 	TEST_STRING("\" \\ / \b \f \n \r \t", "\"\\\" \\\\ \\/ \\b \\f \\n \\r \\t\"");
+	//检测UNICODE解析
+	TEST_STRING("Hello\0World", "\"Hello\\u0000World\"");
+	TEST_STRING("\x24", "\"\\u0024\"");//美元 U+0024
+	TEST_STRING("\xC2\xA2", "\"\\u00A2\"");//美分 U+00A2
+	TEST_STRING("\xE2\x82\xAC", "\"\\u20AC\"");//欧元 U+20AC
+	TEST_STRING("\xF0\x9D\x84\x9E", "\"\\uD834\\uDD1E\"");//辅助平面UTF-8，U+1D11E，有的终端支持不全
+	TEST_STRING("\xF0\x9D\x84\x9E", "\"\\ud834\\udd1e\"");//U+1D11E，同上
 }
 #define TEST_ERROR(error_code, json)\
 		do {\
@@ -183,6 +190,32 @@ static void test_parse_invalid_string_char()
 	TEST_ERROR(SYJSON_PARSE_INVALID_STRING_CHAR, "\"\x01\"");
 	TEST_ERROR(SYJSON_PARSE_INVALID_STRING_CHAR, "\"\x1F\"");
 }
+//测试字符串无效UNICODE
+static void test_parse_invalid_unicode_hex()
+{
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_HEX, "\"\\u\"");
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_HEX, "\"\\u0\"");
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_HEX, "\"\\u01\"");
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_HEX, "\"\\u012\"");
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_HEX, "\"\\u/000\"");
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_HEX, "\"\\uG000\"");
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_HEX, "\"\\u0/00\"");
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_HEX, "\"\\u0G00\"");
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_HEX, "\"\\u00/0\"");
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_HEX, "\"\\u00G0\"");
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_HEX, "\"\\u000/\"");
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_HEX, "\"\\u000G\"");
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_HEX, "\"\\u 123\"");
+}
+//测试字符串无效代理码点
+static void test_parse_invalid_unicode_surrogate()
+{
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_SURROGATE, "\"\\uD800\"");
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_SURROGATE, "\"\\uDBFF\"");
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_SURROGATE, "\"\\uD800\\\\\"");
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_SURROGATE, "\"\\uD800\\uDBFF\"");
+	TEST_ERROR(SYJSON_PARSE_INVALID_UNICODE_SURROGATE, "\"\\uD800\\uE000\"");
+}
 
 //测试获取NULL类型
 static void test_access_null()
@@ -244,6 +277,8 @@ static void test_parse()
 	test_parse_missing_quotation_mark();
 	test_parse_invalid_string_escape();
 	test_parse_invalid_string_char();
+	test_parse_invalid_unicode_hex();
+	test_parse_invalid_unicode_surrogate();
 	//测试获取值
 	test_access_null();
 	test_access_boolean();
