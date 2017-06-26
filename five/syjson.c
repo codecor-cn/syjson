@@ -143,7 +143,8 @@ static void* syjson_content_push(syjson_content* c, size_t size)
 	if(c->top + size >= c->size)
 	{
 		//初始化栈空间
-		if(c->size == 0)
+		
+if(c->size == 0)
 			c->size = SYJSON_PARSE_STACK_INIT_SIZE;
 		//以一点五倍增量增加栈空间
 		while(c->top + size >= c->size)
@@ -299,6 +300,48 @@ static int syjson_parse_root_not_singular(syjson_content* c, syjson_value* v)
 		return SYJSON_PARSE_ROOT_NOT_SINGULAR;
 	}
 }
+
+//向前声明
+static int syjson_parse_value(syjson_content* c, syjson_value* v);
+//解析数组
+static int syjson_parse_array(syjson_content* c, syjson_value* v)
+{
+	size_t size = 0;
+	int ret;
+	EXPECT(c, '[');
+	//空数组
+	if(*c->json == ']')
+	{
+		c->json++;
+		v->type = SYJSON_ARR;
+		v->val.arr.size = 0;
+		v->val.arr.e = NULL;
+		return SYJSON_PARSE_OK;
+	}
+	for(;;)
+	{
+		syjson_value e;
+		syjson_init(&e);
+		if(SYJSON_PARSE_OK != (ret = syjson_parse_value))
+			return ret;
+		memcpy(syjson_content_push(c, sizeof(syjson_value)), &e, sizeof(syjson_value));
+		size++;
+		if(*c->json == ',')
+			c->json++;
+		else if(*c->json == ']')
+		{
+			c->json++;
+			v->type = SYJSON_ARR;
+			v->val.arr.size = size;
+			size *= sizeof(syjson_value);
+			memcpy(v->val.arr.e = (syjson_value*)malloc(size), syjson_content_pop(c, size), size);
+			return SYJSON_PARSE_OK;
+		}
+		else
+			return SYJSON_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
+	}
+}
+
 //解析json入口
 static int syjson_parse_value(syjson_content* c, syjson_value* v)
 {
@@ -363,11 +406,18 @@ const char* syjson_get_string(const syjson_value* v)
 	assert(v != NULL && v->type == SYJSON_STR);
 	return v->val.str.s;
 }
-
-
-
-
-
-
-
+//获取数组大小
+size_t syjson_get_array_size(const syjson_value* v)
+{
+	assert(v != NULL && v->type == SYJSON_ARR);
+	return v->val.arr.size;
+}
+//获取数组元素
+syjson_value* syjson_get_array_element(const syjson_value* v, size_t index)
+{
+	assert(v != NULL && v->type == SYJSON_ARR);
+	//指针越界
+	assert(index <= v->val.arr.size);
+	return &v->val.arr.e[index];
+}
 

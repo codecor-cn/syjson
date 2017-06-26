@@ -24,8 +24,8 @@ static int test_pass = 0;
 #define EXPECT_EQ_DOUBLE(expect, actual) EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%.17g")
 #define EXPECT_EQ_TRUE(expect) EXPECT_EQ_BASE((expect) != 0, "true", "false", "%s")
 #define EXPECT_EQ_FALSE(expect) EXPECT_EQ_BASE((expect) == 0, "false", "true", "%s")
-#define EXPECT_EQ_STRING(expect, autual, alen) EXPECT_EQ_BASE(sizeof(expect) -1 == alen && memcmp(expect, autual, alen) == 0, expect, autual, "%s");
-#define EXPECT_EQ_ARRAY(expect, autual, alen) EXPECT_EQ_BASE(sizeof(expect) -1 == alen && memcmp(expect, autual, alen) == 0, expect, autual, "%s");
+#define EXPECT_EQ_STRING(expect, actual, alen) EXPECT_EQ_BASE(sizeof(expect) -1 == alen && memcmp(expect, actual, alen) == 0, expect, actual, "%s");
+#define EXPECT_EQ_ARRAY_SIZE(expect, actual) EXPECT_EQ_BASE((expect) == (actual), (size_t)expect, (size_t)actual, "%zu");
 
 //测试NULL类型数据
 static void test_parse_null()
@@ -126,15 +126,13 @@ static void test_parse_string()
 	TEST_STRING("\xF0\x9D\x84\x9E", "\"\\ud834\\udd1e\"");//U+1D11E，同上
 }
 
-#define EXPECT_EQ_ARRAY_SIZE(SIZE, ARRAY_SIZE) EXPECT_EQ_BASE()
 //测试解析数组
 static void test_parse_array()
 {
 	syjson_value v;
-
 	syjson_init(&v);
 	EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "[ ]"));
-	EXPECT_EQ_INT(SYJSON_ARRAY, syjson_get_type(&v));
+	EXPECT_EQ_INT(SYJSON_ARR, syjson_get_type(&v));
 	EXPECT_EQ_ARRAY_SIZE(0, syjson_get_array_size(&v));
 	syjson_free(&v);
 }
@@ -294,12 +292,13 @@ static void test_access_string()
 static void test_access_array()
 {
 	//TODO 检测数组获取情况
-	/*
 	syjson_value v;
 	syjson_init(&v);
-	syjson_set_array(&v, "[]", 1);
-	EXPECT_EQ_ARRAY("[]", syjson_get_string(&v), 1);
-	*/
+	syjson_value* t;
+	syjson_parse(&v, "[false]");
+	t = syjson_get_array_element(&v, 1);
+	EXPECT_EQ_INT(SYJSON_FALSE, syjson_get_type(t));
+	//EXPECT_EQ_ARRAY("[]", syjson_get_string(&v), 1);
 }
 //测试函数入口
 static void test_parse()

@@ -3,21 +3,23 @@
 
 #include <stddef.h> // size_t
 //数据类型
-typedef enum
-{
+typedef enum {
 	SYJSON_NULL, SYJSON_TRUE, SYJSON_FALSE, SYJSON_NUM, SYJSON_STR, SYJSON_ARR, SYJSON_OBJ
 } syjson_type;
+
 //值结构
-typedef struct
+typedef struct syjson_value syjson_value;
+struct syjson_value
 {
-	syjson_type type;
+	syjson_type type; //元素类型
 	union
 	{
 		struct {syjson_value* e;size_t size;} arr;  // 元素，数量
 		struct {char* s; size_t l;} str;  //字符串指针，长度
 		double num;  //浮点数
-	} val;
-} syjson_value;
+	} val; //元素值
+};
+
 //错误类型
 enum {
 	SYJSON_PARSE_OK = 0,
@@ -32,7 +34,8 @@ enum {
 	SYJSON_PARSE_INVALID_UNICODE_SURROGATE,
 	SYJSON_PARSE_MISS_COMMA_OR_SQUARE_BRACKET
 };
-//动态堆栈
+
+//json字符串--动态堆栈
 typedef struct
 {
 	const char* json;
