@@ -143,8 +143,7 @@ static void* syjson_content_push(syjson_content* c, size_t size)
 	if(c->top + size >= c->size)
 	{
 		//初始化栈空间
-		
-if(c->size == 0)
+		if(c->size == 0)
 			c->size = SYJSON_PARSE_STACK_INIT_SIZE;
 		//以一点五倍增量增加栈空间
 		while(c->top + size >= c->size)

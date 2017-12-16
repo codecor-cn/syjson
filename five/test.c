@@ -129,12 +129,38 @@ static void test_parse_string()
 //测试解析数组
 static void test_parse_array()
 {
+	size_t i, j;
 	syjson_value v;
+
 	syjson_init(&v);
 	EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "[ ]"));
 	EXPECT_EQ_INT(SYJSON_ARR, syjson_get_type(&v));
 	EXPECT_EQ_ARRAY_SIZE(0, syjson_get_array_size(&v));
 	syjson_free(&v);
+
+	syjson_init(&v);
+	EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "[ null , false , true , 987 , \"shiyu\" ]"));
+	EXPECT_EQ_INT(SYJSON_ARR, syjson_get_type(&v));
+	EXPECT_EQ_ARRAY_SIZE(5, syjson_get_array_size(&v));
+	EXPECT_EQ_INT(SYJSON_NULL, syjson_get_type(syjson_get_array_element(&v, 0)));
+	EXPECT_EQ_INT(SYJSON_FALSE, syjson_get_type(syjson_get_array_element(&v, 1)));
+	EXPECT_EQ_INT(SYJSON_TRUE, syjson_get_type(syjson_get_array_element(&v, 2)));
+	EXPECT_EQ_INT(SYJSON_NUM, syjson_get_type(syjson_get_array_element(&v, 3)));
+	EXPECT_EQ_INT(SYJSON_STR, syjson_get_type(syjson_get_array_element(&v, 4)));
+	EXPECT_EQ_DOUBLE(123.0, syjson_get_number(syjson_get_array_element(&v, 3)));
+	EXPECT_EQ_STRING("abc", syjson_get_string(syjson_get_array_element(&v, 4)), syjson_get_string_length(syjson_get_array_element(&v, 4)));
+	syjson_free(&v);
+
+	syjson_init(&v);
+	EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "[ [ ] , [ 0 ] , [ 0 , 1 ] , [ 0 , 1 , 2 ] ]"));
+	EXPECT_EQ_INT(SYJSON_ARR, syjson_get_type(&v));
+	EXPECT_EQ_ARRAY_SIZE(4, syjson_get_array_size(&v));
+	for(i=0;i<4;i++)
+	{
+		syjson_value* a = syjson_get_array_element(&v, i);
+		EXPECT_EQ_INT
+	}
+
 }
 
 //测试语法错误
@@ -242,7 +268,28 @@ static void test_parse_miss_comma_or_square_bracket()
 	TEST_ERROR(SYJSON_PARSE_MISS_COMMA_OR_SQUARE_BRACKET, "[1}");
 	TEST_ERROR(SYJSON_PARSE_MISS_COMMA_OR_SQUARE_BRACKET, "[1 2");
 	TEST_ERROR(SYJSON_PARSE_MISS_COMMA_OR_SQUARE_BRACKET, "[[]");
-	TEST_ERROR(SYJSON_PARSE_MISS_COMMA_OR_SQUARE_BRACKET, "[,");
+	//TEST_ERROR(SYJSON_PARSE_MISS_COMMA_OR_SQUARE_BRACKET, "[,");
+}
+//解析json测试
+static void test_parse()
+{
+	test_parse_null();
+	test_parse_true();
+	test_parse_false();
+	test_parse_number();
+	test_parse_string();
+	test_parse_array();
+	//错误测试
+	test_parse_expect_value();
+	test_parse_invalid_value();
+	test_parse_root_not_singular();
+	test_parse_number_too_big();
+	test_parse_missing_quotation_mark();
+	test_parse_invalid_string_escape();
+	test_parse_invalid_string_char();
+	test_parse_invalid_unicode_hex();
+	test_parse_invalid_unicode_surrogate();
+	test_parse_miss_comma_or_square_bracket();
 }
 
 //测试获取NULL类型
@@ -300,26 +347,9 @@ static void test_access_array()
 	EXPECT_EQ_INT(SYJSON_FALSE, syjson_get_type(t));
 	//EXPECT_EQ_ARRAY("[]", syjson_get_string(&v), 1);
 }
-//测试函数入口
-static void test_parse()
+//测试获取值
+static void test_access()
 {
-	//解析json测试
-	test_parse_null();
-	test_parse_true();
-	test_parse_false();
-	test_parse_number();
-	test_parse_string();
-	//错误测试
-	test_parse_expect_value();
-	test_parse_invalid_value();
-	test_parse_root_not_singular();
-	test_parse_number_too_big();
-	test_parse_missing_quotation_mark();
-	test_parse_invalid_string_escape();
-	test_parse_invalid_string_char();
-	test_parse_invalid_unicode_hex();
-	test_parse_invalid_unicode_surrogate();
-	//测试获取值
 	test_access_null();
 	test_access_boolean();
 	test_access_number();
@@ -329,6 +359,7 @@ static void test_parse()
 int main(int argc, char** argv)
 {
 	test_parse();
+	test_access();
 	printf("%d/%d (%3.2f%%) 通过\n", test_pass, test_count, test_pass * 100.0 / test_count);
 	return main_result;
 }
