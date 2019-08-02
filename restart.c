@@ -5,7 +5,7 @@
 
 int main(int argc, char *argv[]) {
     pid_t pid;
-    int child_pid;
+    pid_t child_pid;
     int ret;
     int file_exist;
     char* elf_path = argv[1];
