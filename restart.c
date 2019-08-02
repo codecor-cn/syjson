@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
         } else if(pid != 0) {
             printf("父进程等待子进程结束\n");
             child_pid = wait(NULL);
-            if(ret == -1) {
+            if(child_pid == -1) {
                 printf("获取子进程进程号失败\n");
             } else {
                 printf("退出的子进程进程号是:%d;\n", child_pid);
