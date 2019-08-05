@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
+#include <signal.h>
 
 void print_log(char* log) {
     time_t rawtime;
@@ -24,7 +25,9 @@ int main(int argc, char *argv[]) {
     char* elf_path = argv[1];
     char* param[16];
     char child_process[1024];
-    
+
+    signal(SIGHUP, SIG_IGN);
+
     //忽略本进程名及待加载ELF路径
     for(i = 2;i < argc;i++) {
         j = i - 2;
