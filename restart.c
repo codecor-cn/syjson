@@ -26,16 +26,6 @@ int main(int argc, char *argv[]) {
     char* param[16];
     char child_process[1024];
 
-    signal(SIGHUP, SIG_IGN);
-
-    //忽略本进程名及待加载ELF路径
-    for(i = 2;i < argc;i++) {
-        j = i - 2;
-        param[j] = argv[i];
-    }
-    j++;
-    param[j] = NULL;
-
     if(argc <= 2) {
         printf("参数数量错误\n");
         printf("使用方法：本程序名 待加载ELF文件绝对路径 进程名 参数(可加空格)'\n");
@@ -47,6 +37,17 @@ int main(int argc, char *argv[]) {
         printf("待执行文件不存在，请检查文件\n");
         return 2;
     }
+
+    signal(SIGHUP, SIG_IGN);
+
+    //忽略本进程名及待加载ELF路径
+    for(i = 2;i < argc;i++) {
+        j = i - 2;
+        param[j] = argv[i];
+    }
+    j++;
+    param[j] = NULL;
+
     do {
         pid = fork();
 
