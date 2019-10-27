@@ -51,8 +51,8 @@ static int syjson_parse_literal(syjson_content* c, syjson_value* v, const char* 
 {
 	size_t i;
 	EXPECT(c, literal[0]);
-	for(i=0; literal[i+1]; i++)
-		if(c->json[i] != literal[i+1])
+	for(i = 0; literal[i + 1]; i++)
+		if(c->json[i] != literal[i + 1])
 			return SYJSON_PARSE_INVALID_VALUE;
 	c->json += i;
 	v->type = type;
@@ -300,20 +300,21 @@ static int syjson_parse_root_not_singular(syjson_content* c, syjson_value* v)
 	}
 }
 
-//向前声明
+//向前声明相互依赖
 static int syjson_parse_value(syjson_content* c, syjson_value* v);
 //解析数组
 static int syjson_parse_array(syjson_content* c, syjson_value* v)
 {
-	size_t size = 0;
+	size_t i, size = 0;
 	int ret;
 	EXPECT(c, '[');
-	//空数组
+	//过滤空数组
+	syjson_parse_whitespace(c);
 	if(*c->json == ']')
 	{
 		c->json++;
 		v->type = SYJSON_ARR;
-		v->val.arr.size = 0;
+		v->val.arr.s = 0;
 		v->val.arr.e = NULL;
 		return SYJSON_PARSE_OK;
 	}
@@ -321,24 +322,35 @@ static int syjson_parse_array(syjson_content* c, syjson_value* v)
 	{
 		syjson_value e;
 		syjson_init(&e);
-		if(SYJSON_PARSE_OK != (ret = syjson_parse_value))
-			return ret;
+		ret = syjson_parse_value(c, &e);
+		if(ret != SYJSON_PARSE_OK)
+			break;
 		memcpy(syjson_content_push(c, sizeof(syjson_value)), &e, sizeof(syjson_value));
 		size++;
-		if(*c->json == ',')
+		syjson_parse_whitespace(c);
+		if(*c->json == ',') {
 			c->json++;
+			syjson_parse_whitespace(c);
+		}
 		else if(*c->json == ']')
 		{
 			c->json++;
 			v->type = SYJSON_ARR;
-			v->val.arr.size = size;
+			v->val.arr.s = size;
 			size *= sizeof(syjson_value);
 			memcpy(v->val.arr.e = (syjson_value*)malloc(size), syjson_content_pop(c, size), size);
+			//解析成功 直接返回
 			return SYJSON_PARSE_OK;
 		}
-		else
-			return SYJSON_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
+		else {
+			ret = SYJSON_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
+			break;
+		}
 	}
+	//弹出栈帧并释放空间
+	for (i = 0; i < size; i++)
+		syjson_free((syjson_value*)syjson_content_pop(c, sizeof(syjson_value)));
+	return ret;
 }
 
 //解析json入口
@@ -346,12 +358,13 @@ static int syjson_parse_value(syjson_content* c, syjson_value* v)
 {
 	switch(c->json[0])
 	{
-		case 'n': return syjson_parse_literal(c, v, "null", SYJSON_NULL);
-		case 'f': return syjson_parse_literal(c, v, "false", SYJSON_FALSE);
-		case 't': return syjson_parse_literal(c, v, "true", SYJSON_TRUE);
-		case '\0': return SYJSON_PARSE_EXPECT_VALUE;
-		case '"': return syjson_parse_string(c, v);
-		default: return syjson_parse_number(c, v);
+		case 'n' : return syjson_parse_literal(c, v, "null", SYJSON_NULL);break;
+		case 'f' : return syjson_parse_literal(c, v, "false", SYJSON_FALSE);break;
+		case 't' : return syjson_parse_literal(c, v, "true", SYJSON_TRUE);break;
+		case '"' : return syjson_parse_string(c, v);break;
+		case '[' : return syjson_parse_array(c, v);break;
+		case '\0': return SYJSON_PARSE_EXPECT_VALUE;break;
+		default  : return syjson_parse_number(c, v);break;
 	}
 }
 
@@ -409,14 +422,13 @@ const char* syjson_get_string(const syjson_value* v)
 size_t syjson_get_array_size(const syjson_value* v)
 {
 	assert(v != NULL && v->type == SYJSON_ARR);
-	return v->val.arr.size;
+	return v->val.arr.s;
 }
 //获取数组元素
 syjson_value* syjson_get_array_element(const syjson_value* v, size_t index)
 {
 	assert(v != NULL && v->type == SYJSON_ARR);
 	//指针越界
-	assert(index <= v->val.arr.size);
+	assert(index <= v->val.arr.s);
 	return &v->val.arr.e[index];
 }
-

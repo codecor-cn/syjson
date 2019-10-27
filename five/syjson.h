@@ -14,7 +14,7 @@ struct syjson_value
 	syjson_type type; //元素类型
 	union
 	{
-		struct {syjson_value* e;size_t size;} arr;  // 元素，数量
+		struct {syjson_value* e;size_t s;} arr;  // 元素，数量
 		struct {char* s; size_t l;} str;  //字符串指针，长度
 		double num;  //浮点数
 	} val; //元素值

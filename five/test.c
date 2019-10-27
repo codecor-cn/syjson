@@ -147,8 +147,8 @@ static void test_parse_array()
 	EXPECT_EQ_INT(SYJSON_TRUE, syjson_get_type(syjson_get_array_element(&v, 2)));
 	EXPECT_EQ_INT(SYJSON_NUM, syjson_get_type(syjson_get_array_element(&v, 3)));
 	EXPECT_EQ_INT(SYJSON_STR, syjson_get_type(syjson_get_array_element(&v, 4)));
-	EXPECT_EQ_DOUBLE(123.0, syjson_get_number(syjson_get_array_element(&v, 3)));
-	EXPECT_EQ_STRING("abc", syjson_get_string(syjson_get_array_element(&v, 4)), syjson_get_string_length(syjson_get_array_element(&v, 4)));
+	EXPECT_EQ_DOUBLE(987.0, syjson_get_number(syjson_get_array_element(&v, 3)));
+	EXPECT_EQ_STRING("shiyu", syjson_get_string(syjson_get_array_element(&v, 4)), syjson_get_string_length(syjson_get_array_element(&v, 4)));
 	syjson_free(&v);
 
 	syjson_init(&v);
@@ -158,9 +158,14 @@ static void test_parse_array()
 	for(i=0;i<4;i++)
 	{
 		syjson_value* a = syjson_get_array_element(&v, i);
-		EXPECT_EQ_INT
+		EXPECT_EQ_INT(SYJSON_ARR, syjson_get_type(a));
+		EXPECT_EQ_ARRAY_SIZE(i, syjson_get_array_size(a));
+		for (j = 0; j < i; j++) {
+			syjson_value* e = syjson_get_array_element(a, j);
+			EXPECT_EQ_INT(SYJSON_NUM, syjson_get_type(e));
+			EXPECT_EQ_DOUBLE((double)j, syjson_get_number(e));
+		}
 	}
-
 }
 
 //测试语法错误
@@ -196,7 +201,8 @@ static void test_parse_invalid_value()
 	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "nan");
 
 	//错误数组
-	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "[1,");
+	TEST_ERROR(SYJSON_PARSE_EXPECT_VALUE,  "[1,");
+	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "[1,]");
 	TEST_ERROR(SYJSON_PARSE_INVALID_VALUE, "[\"a\", nul]");
 
 }
