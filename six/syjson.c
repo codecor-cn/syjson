@@ -150,6 +150,8 @@ void syjson_set_string(syjson_value* v, const char* s, size_t len)
 #ifndef SYJSON_PARSE_STACK_INIT_SIZE
 #define SYJSON_PARSE_STACK_INIT_SIZE 256
 #endif
+//压栈操作，单个字符写入到新地址
+#define PUTC(c, ch) do{ *(char*)syjson_content_push(c, sizeof(char)) = (ch); }while(0)
 //处理栈空间
 static void* syjson_content_push(syjson_content* c, size_t size)
 {
@@ -172,8 +174,6 @@ static void* syjson_content_push(syjson_content* c, size_t size)
     //返回栈顶地址
     return ret;
 }
-//压栈操作，单个字符写入到新地址
-#define PUTC(c, ch) do{ *(char*)syjson_content_push(c, sizeof(char)) = (ch); }while(0)
 //全部弹出栈
 static void* syjson_content_pop(syjson_content* c, size_t len)
 {
@@ -306,7 +306,8 @@ static int syjson_string_to_value(syjson_content* c, syjson_value* v)
     char* s;
     size_t len;
     ret = syjson_parse_string(c, &s, &len);
-    if ((ret == SYJSON_PARSE_OK)) {
+    if(ret == SYJSON_PARSE_OK)
+    {
         syjson_set_string(v, s, len);
     }
 }
@@ -463,6 +464,7 @@ static int syjson_parse_object(syjson_content* c, syjson_value* v)
 //解析json入口
 static int syjson_parse_value(syjson_content* c, syjson_value* v)
 {
+    printf("%c ", c->json[0]);
     switch(c->json[0])
     {
         case 'n' : return syjson_parse_literal(c, v, "null", SYJSON_NULL);break;
@@ -470,8 +472,8 @@ static int syjson_parse_value(syjson_content* c, syjson_value* v)
         case 't' : return syjson_parse_literal(c, v, "true", SYJSON_TRUE);break;
         case '"' : return syjson_string_to_value(c, v);break;
         case '[' : return syjson_parse_array(c, v);break;
-        case '\0': return SYJSON_PARSE_EXPECT_VALUE;break;
         case '{':  return syjson_parse_object(c, v);break;
+        case '\0': return SYJSON_PARSE_EXPECT_VALUE;break;
         default  : return syjson_parse_number(c, v);break;
     }
 }
@@ -541,10 +543,30 @@ syjson_value* syjson_get_array_element(const syjson_value* v, size_t index)
     return &v->val.arr.e[index];
 }
 //获取对象数量
-size_t syjson_get_object_size(const syjson_value* v);
+size_t syjson_get_object_size(const syjson_value* v)
+{
+    assert(v != NULL && v->type == SYJSON_OBJ);
+    return v->val.obj.s;
+}
 //获取对象键
-const char* syjson_get_object_key(const syjson_value* v, size_t index);
+const char* syjson_get_object_key(const syjson_value* v, size_t index)
+{
+    assert(v != NULL && v->type == SYJSON_OBJ);
+    //成员越界
+    assert(index < v->val.obj.s);
+    return v->val.obj.m[index].k;
+}
 //获取对象键，字符串长度
-size_t syjson_get_object_key_length(const syjson_value* v, size_t index);
+size_t syjson_get_object_key_length(const syjson_value* v, size_t index)
+{
+    assert(v != NULL && v->type == SYJSON_OBJ);
+    assert(index < v->val.obj.s);
+    return v->val.obj.m[index].kl;
+}
 //获取对象值
-syjson_value* syjson_get_object_value(const syjson_value* v, size_t index);
+syjson_value* syjson_get_object_value(const syjson_value* v, size_t index)
+{
+    assert(v != NULL && v->type == SYJSON_OBJ);
+    assert(index < v->val.obj.s);
+    return &v->val.obj.m[index].v;
+}
