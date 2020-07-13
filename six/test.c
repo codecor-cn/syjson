@@ -15,7 +15,7 @@ static int test_pass = 0;
                 test_pass++;\
             else\
             {\
-                fprintf(stderr, "%s:%d: 想要的类型值:"format" 实际的类型值:"format"\n", __FILE__, __LINE__, expect, actual);\
+                fprintf(stderr, "%s:%d: 输出类型: %s; 想要的值: "format"; 实际的值: "format";\n", __FILE__, __LINE__, format, expect, actual);\
                 main_result = 1;\
             }\
         } while(0)
@@ -24,7 +24,7 @@ static int test_pass = 0;
 #define EXPECT_EQ_DOUBLE(expect, actual) EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%.17g")
 #define EXPECT_EQ_TRUE(expect) EXPECT_EQ_BASE((expect) != 0, "true", "false", "%s")
 #define EXPECT_EQ_FALSE(expect) EXPECT_EQ_BASE((expect) == 0, "false", "true", "%s")
-#define EXPECT_EQ_STRING(expect, actual, alen) EXPECT_EQ_BASE(sizeof(expect) -1 == alen && memcmp(expect, actual, alen) == 0, expect, actual, "%s");
+#define EXPECT_EQ_STRING(expect, actual, alen) EXPECT_EQ_BASE(sizeof(expect) - 1 == alen && memcmp(expect, actual, alen + 1) == 0, expect, actual, "%s");
 #define EXPECT_EQ_ARRAY_SIZE(expect, actual) EXPECT_EQ_BASE((expect) == (actual), (size_t)expect, (size_t)actual, "%zu");
 
 //测试NULL类型数据

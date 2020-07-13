@@ -229,7 +229,7 @@ static void syjson_encode_utf8(syjson_content* c, unsigned u)
     }
 }
 //解析字符串
-static int syjson_parse_string(syjson_content* c, char** str, size_t* len)
+static int syjson_string_to_value(syjson_content* c, char** str, size_t* len)
 {
     size_t head = c->top;
     unsigned u, u2;
@@ -300,22 +300,23 @@ static int syjson_parse_string(syjson_content* c, char** str, size_t* len)
     }
 }
 //写入字符串到值
-static int syjson_string_to_value(syjson_content* c, syjson_value* v)
+static int syjson_parse_string(syjson_content* c, syjson_value* v)
 {
     int ret;
     char* s;
     size_t len;
-    ret = syjson_parse_string(c, &s, &len);
+    ret = syjson_string_to_value(c, &s, &len);
     if(ret == SYJSON_PARSE_OK)
     {
         syjson_set_string(v, s, len);
     }
+    return ret;
 }
 //值之后空白
 static int syjson_parse_root_not_singular(syjson_content* c, syjson_value* v)
 {
     syjson_parse_whitespace(c);
-    if(c->json[0] == '\0')
+    if(*c->json == '\0')
         return SYJSON_PARSE_OK;
     else
     {
@@ -405,7 +406,7 @@ static int syjson_parse_object(syjson_content* c, syjson_value* v)
             break;
         }
         //解析对象键
-        ret = syjson_parse_string(c, &str, &m.kl);
+        ret = syjson_string_to_value(c, &str, &m.kl);
         if(ret != SYJSON_PARSE_OK)
             break;
         memcpy(m.k = (char*)malloc(m.kl + 1), str, m.kl);
@@ -464,15 +465,14 @@ static int syjson_parse_object(syjson_content* c, syjson_value* v)
 //解析json入口
 static int syjson_parse_value(syjson_content* c, syjson_value* v)
 {
-    printf("%c ", c->json[0]);
-    switch(c->json[0])
+    switch(*c->json)
     {
         case 'n' : return syjson_parse_literal(c, v, "null", SYJSON_NULL);break;
         case 'f' : return syjson_parse_literal(c, v, "false", SYJSON_FALSE);break;
         case 't' : return syjson_parse_literal(c, v, "true", SYJSON_TRUE);break;
-        case '"' : return syjson_string_to_value(c, v);break;
+        case '"' : return syjson_parse_string(c, v);break;
         case '[' : return syjson_parse_array(c, v);break;
-        case '{':  return syjson_parse_object(c, v);break;
+        case '{' : return syjson_parse_object(c, v);break;
         case '\0': return SYJSON_PARSE_EXPECT_VALUE;break;
         default  : return syjson_parse_number(c, v);break;
     }
@@ -482,21 +482,22 @@ static int syjson_parse_value(syjson_content* c, syjson_value* v)
 int syjson_parse(syjson_value* v, const char* json)
 {
     syjson_content c;
-    int result;
+    int ret;
     assert(v != NULL);
     c.json = json;
     c.stack = NULL;
     c.size = c.top = 0;
     syjson_init(v);
-    v->type = SYJSON_NULL;
     syjson_parse_whitespace(&c);
-    result = syjson_parse_value(&c, v);
-    if(SYJSON_PARSE_OK == result)
-        result = syjson_parse_root_not_singular(&c, v);
+    ret = syjson_parse_value(&c, v);
+
+    if(SYJSON_PARSE_OK == ret)
+        ret = syjson_parse_root_not_singular(&c, v);
 
     assert(c.top == 0);
     free(c.stack);
-    return result;
+
+    return ret;
 }
 //返回json数据类型
 syjson_type syjson_get_type(const syjson_value* v)
