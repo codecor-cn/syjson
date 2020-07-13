@@ -2,6 +2,30 @@
 #define SYJSON_H__
 
 #include <stddef.h> // size_t
+
+
+//默认栈大小
+#ifndef SYJSON_PARSE_STACK_INIT_SIZE
+#define SYJSON_PARSE_STACK_INIT_SIZE 256
+#endif
+
+//默认字符串化栈大小
+#ifndef SYJSON_PARSE_STRINGIFY_INIT_SIZE
+#define SYJSON_PARSE_STRINGIFY_INIT_SIZE 256
+#endif
+
+
+//解析数字
+#define ISDIGIT(string) ((string) >= '0' && (string) <= '9')
+#define ISDIGIT1TO9(string) ((string) >= '1' && (string) <= '9')
+//解析字符串错误
+#define STRING_ERROR(ret) do{ c->top = head; return ret; }while(0)
+//压栈操作，单个字符写入到新地址
+#define PUTC(c, ch) do{ *(char*)syjson_content_push(c, sizeof(char)) = (ch); }while(0)
+//字符校验断言
+#define EXPECT(c, ch)  do{ assert(*c->json == (ch)); c->json++; }while(0)
+
+
 //数据类型
 typedef enum {
     SYJSON_NULL, SYJSON_TRUE, SYJSON_FALSE, SYJSON_NUM, SYJSON_STR, SYJSON_ARR, SYJSON_OBJ
