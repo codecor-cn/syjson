@@ -3,55 +3,16 @@
 
 #include <stddef.h> // size_t
 
-
-//默认栈大小
-#ifndef SYJSON_PARSE_STACK_INIT_SIZE
-#define SYJSON_PARSE_STACK_INIT_SIZE 256
-#endif
-
-//默认字符串化栈大小
-#ifndef SYJSON_PARSE_STRINGIFY_INIT_SIZE
-#define SYJSON_PARSE_STRINGIFY_INIT_SIZE 256
-#endif
-
-
-//解析数字
-#define ISDIGIT(string) ((string) >= '0' && (string) <= '9')
-#define ISDIGIT1TO9(string) ((string) >= '1' && (string) <= '9')
-//解析字符串错误
-#define STRING_ERROR(ret) do{ c->top = head; return ret; }while(0)
-//压栈操作，单个字符写入到新地址
-#define PUTC(c, ch) do{ *(char*)syjson_content_push(c, sizeof(char)) = (ch); }while(0)
-//字符校验断言
-#define EXPECT(c, ch)  do{ assert(*c->json == (ch)); c->json++; }while(0)
-
+/**
+ * 对外暴露API及数据结构
+ * SYJSON_PARSE_STACK_INIT_SIZE 默认解析栈字节数
+ * SYJSON_PARSE_STRINGIFY_INIT_SIZE 默认字符串化栈字节数
+ */
 
 //数据类型
 typedef enum {
     SYJSON_NULL, SYJSON_TRUE, SYJSON_FALSE, SYJSON_NUM, SYJSON_STR, SYJSON_ARR, SYJSON_OBJ
 } syjson_type;
-
-//值结构
-typedef struct syjson_value syjson_value;
-typedef struct syjson_member syjson_member;
-struct syjson_value
-{
-    syjson_type type; //元素类型
-    union
-    {
-        struct {syjson_member* m; size_t s;} obj; //对象成员，数量
-        struct {syjson_value* e; size_t s;} arr;  // 数组元素，数量
-        struct {char* s; size_t l;} str;  //字符串指针，长度
-        double num;  //浮点数
-    } val; //元素值
-};
-
-struct syjson_member
-{
-    char* k; // 成员字符串键
-    size_t kl; //成员字符串键长度
-    syjson_value v; //成员值
-};
 
 //错误类型
 enum {
@@ -71,7 +32,29 @@ enum {
     SYJSON_PARSE_MISS_COMMA_OR_CURLY_BRACKET
 };
 
-//json字符串--动态堆栈
+//值结构
+typedef struct syjson_value syjson_value;
+typedef struct syjson_member syjson_member;
+struct syjson_value
+{
+    syjson_type type; //元素类型
+    union
+    {
+        struct {syjson_member* m; size_t s;} obj; //对象成员，数量
+        struct {syjson_value* e; size_t s;} arr;  // 数组元素，数量
+        struct {char* s; size_t l;} str;  //字符串指针，长度
+        double num;  //浮点数
+    } val; //元素值
+};
+//对象成员结构
+struct syjson_member
+{
+    char* k; // 成员字符串键
+    size_t kl; //成员字符串键长度
+    syjson_value v; //成员值
+};
+
+//json字符串--动态数组栈
 typedef struct
 {
     const char* json;
@@ -79,15 +62,18 @@ typedef struct
     size_t size, top;
 } syjson_content;
 
+
 //初始化
 #define syjson_init(v) do { (v)->type = SYJSON_NULL; } while(0)
 //置空
 #define syjson_set_null(v) syjson_free(v);
-//解析函数
+//字符串结构化
 int syjson_parse(syjson_value* v, const char* json);
-//清空数据
+//字符串结构化
+char* syjson_stringify(const syjson_value* v, size_t* length);
+//释放内存
 void syjson_free(syjson_value* v);
-//获取json值类型
+//获取值类型
 syjson_type syjson_get_type(const syjson_value* v);
 //获取布尔值
 int syjson_get_boolean(const syjson_value* v);

@@ -32,7 +32,7 @@ static void test_parse_null()
 {
     syjson_value v;
     syjson_init(&v);
-    syjson_set_boolean(&v, SYJSON_FALSE);
+    syjson_set_boolean(&v, 0);
     EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "null"));
     EXPECT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));
     syjson_free(&v);
@@ -42,7 +42,7 @@ static void test_parse_false()
 {
     syjson_value v;
     syjson_init(&v);
-    syjson_set_boolean(&v, SYJSON_TRUE);
+    syjson_set_boolean(&v, 1);
     EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "false"));
     EXPECT_EQ_INT(SYJSON_FALSE, syjson_get_type(&v));
     syjson_free(&v);
@@ -52,7 +52,7 @@ static void test_parse_true()
 {
     syjson_value v;
     syjson_init(&v);
-    syjson_set_boolean(&v, SYJSON_FALSE);
+    syjson_set_boolean(&v, 0);
     EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, "true"));
     EXPECT_EQ_INT(SYJSON_TRUE, syjson_get_type(&v));
     syjson_free(&v);
@@ -175,7 +175,7 @@ static void test_parse_object() {
     syjson_init(&v);
     EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, " { } "));
     EXPECT_EQ_INT(SYJSON_OBJ, syjson_get_type(&v));
-    EXPECT_EQ_SIZE_T(0, syjson_get_object_size(&v));
+    EXPECT_EQ_ARRAY_SIZE(0, syjson_get_object_size(&v));
     syjson_free(&v);
 
     syjson_init(&v);
@@ -191,7 +191,7 @@ static void test_parse_object() {
         " } "
     ));
     EXPECT_EQ_INT(SYJSON_OBJ, syjson_get_type(&v));
-    EXPECT_EQ_SIZE_T(7, syjson_get_object_size(&v));
+    EXPECT_EQ_ARRAY_SIZE(7, syjson_get_object_size(&v));
     EXPECT_EQ_STRING("n", syjson_get_object_key(&v, 0), syjson_get_object_key_length(&v, 0));
     EXPECT_EQ_INT(SYJSON_NULL,   syjson_get_type(syjson_get_object_value(&v, 0)));
     EXPECT_EQ_STRING("f", syjson_get_object_key(&v, 1), syjson_get_object_key_length(&v, 1));
@@ -206,7 +206,7 @@ static void test_parse_object() {
     EXPECT_EQ_STRING("abc", syjson_get_string(syjson_get_object_value(&v, 4)), syjson_get_string_length(syjson_get_object_value(&v, 4)));
     EXPECT_EQ_STRING("a", syjson_get_object_key(&v, 5), syjson_get_object_key_length(&v, 5));
     EXPECT_EQ_INT(SYJSON_ARR, syjson_get_type(syjson_get_object_value(&v, 5)));
-    EXPECT_EQ_SIZE_T(3, syjson_get_array_size(syjson_get_object_value(&v, 5)));
+    EXPECT_EQ_ARRAY_SIZE(3, syjson_get_array_size(syjson_get_object_value(&v, 5)));
     for (i = 0; i < 3; i++) {
         syjson_value* e = syjson_get_array_element(syjson_get_object_value(&v, 5), i);
         EXPECT_EQ_INT(SYJSON_NUM, syjson_get_type(e));
@@ -218,8 +218,8 @@ static void test_parse_object() {
         EXPECT_EQ_INT(SYJSON_OBJ, syjson_get_type(o));
         for (i = 0; i < 3; i++) {
             syjson_value* ov = syjson_get_object_value(o, i);
-            EXPECT_TRUE('1' + i == syjson_get_object_key(o, i)[0]);
-            EXPECT_EQ_SIZE_T(1, syjson_get_object_key_length(o, i));
+            EXPECT_EQ_TRUE('1' + i == syjson_get_object_key(o, i)[0]);
+            EXPECT_EQ_ARRAY_SIZE(1, syjson_get_object_key_length(o, i));
             EXPECT_EQ_INT(SYJSON_NUM, syjson_get_type(ov));
             EXPECT_EQ_DOUBLE(i + 1.0, syjson_get_number(ov));
         }
@@ -232,7 +232,7 @@ static void test_parse_object() {
         do {\
             syjson_value v;\
             syjson_init(&v);\
-            syjson_set_boolean(&v, SYJSON_FALSE);\
+            syjson_set_boolean(&v, 0);\
             EXPECT_EQ_INT(error_code, syjson_parse(&v, json));\
             EXPECT_EQ_INT(SYJSON_NULL, syjson_get_type(&v));\
             syjson_free(&v);\
@@ -402,9 +402,9 @@ static void test_access_boolean()
     syjson_value v;
     syjson_init(&v);
     syjson_set_string(&v, "a", 1);
-    syjson_set_boolean(&v, SYJSON_TRUE);
+    syjson_set_boolean(&v, 1);
     EXPECT_EQ_TRUE(syjson_get_boolean(&v));
-    syjson_set_boolean(&v, SYJSON_FALSE);
+    syjson_set_boolean(&v, 0);
     EXPECT_EQ_FALSE(syjson_get_boolean(&v));
     syjson_free(&v);
 }
@@ -461,11 +461,77 @@ static void test_access()
     test_access_array();
     test_access_object();
 }
+
+#define TEST_ROUNDTRIP(json)\
+    do {\
+        syjson_value v;\
+        char* json2;\
+        size_t length;\
+        syjson_init(&v);\
+        EXPECT_EQ_INT(SYJSON_PARSE_OK, syjson_parse(&v, json));\
+        json2 = syjson_stringify(&v, &length);\
+        EXPECT_EQ_STRING(json, json2, length);\
+        syjson_free(&v);\
+        free(json2);\
+    } while(0)
+
+static void test_stringify_number() {
+    TEST_ROUNDTRIP("0");
+    TEST_ROUNDTRIP("-0");
+    TEST_ROUNDTRIP("1");
+    TEST_ROUNDTRIP("-1");
+    TEST_ROUNDTRIP("1.5");
+    TEST_ROUNDTRIP("-1.5");
+    TEST_ROUNDTRIP("3.25");
+    TEST_ROUNDTRIP("1e+20");
+    TEST_ROUNDTRIP("1.234e+20");
+    TEST_ROUNDTRIP("1.234e-20");
+
+    TEST_ROUNDTRIP("1.0000000000000002"); /* the smallest number > 1 */
+    TEST_ROUNDTRIP("4.9406564584124654e-324"); /* minimum denormal */
+    TEST_ROUNDTRIP("-4.9406564584124654e-324");
+    TEST_ROUNDTRIP("2.2250738585072009e-308");  /* Max subnormal double */
+    TEST_ROUNDTRIP("-2.2250738585072009e-308");
+    TEST_ROUNDTRIP("2.2250738585072014e-308");  /* Min normal positive double */
+    TEST_ROUNDTRIP("-2.2250738585072014e-308");
+    TEST_ROUNDTRIP("1.7976931348623157e+308");  /* Max double */
+    TEST_ROUNDTRIP("-1.7976931348623157e+308");
+}
+
+static void test_stringify_string() {
+    TEST_ROUNDTRIP("\"\"");
+    TEST_ROUNDTRIP("\"Hello\"");
+    TEST_ROUNDTRIP("\"Hello\\nWorld\"");
+    TEST_ROUNDTRIP("\"\\\" \\\\ / \\b \\f \\n \\r \\t\"");
+    TEST_ROUNDTRIP("\"Hello\\u0000World\"");
+}
+
+static void test_stringify_array() {
+    TEST_ROUNDTRIP("[]");
+    TEST_ROUNDTRIP("[null,false,true,123,\"abc\",[1,2,3]]");
+}
+
+static void test_stringify_object() {
+    TEST_ROUNDTRIP("{}");
+    TEST_ROUNDTRIP("{\"n\":null,\"f\":false,\"t\":true,\"i\":123,\"s\":\"abc\",\"a\":[1,2,3],\"o\":{\"1\":1,\"2\":2,\"3\":3}}");
+}
+
+static void test_stringify() {
+    TEST_ROUNDTRIP("null");
+    TEST_ROUNDTRIP("false");
+    TEST_ROUNDTRIP("true");
+    test_stringify_number();
+    test_stringify_string();
+    test_stringify_array();
+    test_stringify_object();
+}
+
 //主函数
-int main(int argc, char** argv)
+int main(int argc, char* argv[])
 {
     test_parse();
     test_access();
+    test_stringify();
     printf("%d/%d (%3.2f%%) 通过\n", test_pass, test_count, test_pass * 100.0 / test_count);
     return main_result;
 }

@@ -3,9 +3,35 @@
 #include <stdlib.h> /* NULL, malloc(), realloc(), free(), strtod() */
 #include <math.h>   /* HUGE_VAL */
 #include <string.h> /* memcpy() */
+#include <stdio.h> /* sprintf() printf() */
 
 #include "syjson.h"
 
+
+
+//默认栈大小
+#ifndef SYJSON_PARSE_STACK_INIT_SIZE
+#define SYJSON_PARSE_STACK_INIT_SIZE 256
+
+#endif
+
+//默认字符串化栈大小
+#ifndef SYJSON_PARSE_STRINGIFY_INIT_SIZE
+#define SYJSON_PARSE_STRINGIFY_INIT_SIZE 256
+
+#endif
+
+//解析数字判断
+#define ISDIGIT(string) ((string) >= '0' && (string) <= '9')
+#define ISDIGIT1TO9(string) ((string) >= '1' && (string) <= '9')
+//解析字符串错误
+#define STRING_ERROR(ret) do{ c->top = head; return ret; }while(0)
+//字符校验断言
+#define EXPECT(c, ch)  do{ assert(*c->json == (ch)); c->json++; }while(0)
+//压栈操作，单个字符写入到新地址
+#define PUTC(c, ch) do{ *(char*)syjson_content_push(c, sizeof(char)) = (ch); }while(0)
+//字符串内存复制
+#define PUTS(c, s, len) memcpy(syjson_content_push(c, len), s, len)
 
 //过滤空白
 static void syjson_parse_whitespace(syjson_content* c)
@@ -14,6 +40,81 @@ static void syjson_parse_whitespace(syjson_content* c)
     while(*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')
         p++;
     c->json = p;
+}
+//解析完毕尾部字符判断
+static int syjson_parse_root_not_singular(syjson_content* c, syjson_value* v)
+{
+    syjson_parse_whitespace(c);
+    if(*c->json == '\0')
+        return SYJSON_PARSE_OK;
+    else
+    {
+        v->type = SYJSON_NULL;
+        return SYJSON_PARSE_ROOT_NOT_SINGULAR;
+    }
+}
+//多类型入栈
+static void* syjson_content_push(syjson_content* c, size_t size)
+{
+    void* ret;
+    assert(size > 0);
+    //检查是否超出栈空间
+    if(c->top + size >= c->size)
+    {
+        //初始化栈空间
+        if(c->size == 0)
+            c->size = SYJSON_PARSE_STACK_INIT_SIZE;
+        //一点五倍增量增加栈空间可能回退至初次分配地址，减少内存碎片
+        while(c->top + size >= c->size)
+            c->size += c->size >> 1;
+        //申请堆内存，制作栈空间
+        c->stack = (char*) realloc(c->stack, c->size);
+    }
+    ret = c->stack + c->top;
+    c->top += size;
+    //返回栈顶地址
+    return ret;
+}
+//弹出指定栈数据
+static void* syjson_content_pop(syjson_content* c, size_t len)
+{
+    assert(c->top >= len);
+    //根据栈顶和长度返回当前出栈地址
+    return c->stack + (c->top -= len);
+}
+//释放栈空间
+void syjson_free(syjson_value* v)
+{
+    assert(v != NULL);
+    size_t i;
+    switch(v->type)
+    {
+        case SYJSON_STR:
+            free(v->val.str.s);
+            break;
+        case SYJSON_ARR:
+            for (i = 0; i < v->val.arr.s; i++)
+            {
+                //释放数组内元素
+                syjson_free(&v->val.arr.e[i]);
+            }
+            //释放数组内元素
+            free(v->val.arr.e);
+            break;
+        case SYJSON_OBJ:
+            for(i = 0;i < v->val.obj.s; i++)
+            {
+                //释放对象内成员key
+                free(v->val.obj.m[i].k);
+                //释放对象内成员
+                syjson_free(&v->val.obj.m[i].v);
+            }
+            free(v->val.obj.m);
+            break;
+        default:
+            break;
+    }
+    v->type = SYJSON_NULL;
 }
 //解析null类型
 static int syjson_parse_null(syjson_content* c, syjson_value* v)
@@ -57,7 +158,7 @@ static int syjson_parse_literal(syjson_content* c, syjson_value* v, const char* 
     v->type = type;
     return SYJSON_PARSE_OK;
 }
-//json字符串字面量转换double--字符分析兜底
+//json字符串字面量转换double
 static int syjson_parse_number(syjson_content* c, syjson_value* v)
 {
     const char* p = c->json;
@@ -93,95 +194,6 @@ static int syjson_parse_number(syjson_content* c, syjson_value* v)
     c->json = p;
     v->type = SYJSON_NUM;
     return SYJSON_PARSE_OK;
-}
-//释放栈空间
-void syjson_free(syjson_value* v)
-{
-    assert(v != NULL);
-    size_t i;
-    switch(v->type)
-    {
-        case SYJSON_STR:
-            free(v->val.str.s);
-            break;
-        case SYJSON_ARR:
-            for (i = 0; i < v->val.arr.s; i++)
-            {
-                //释放数组内元素
-                syjson_free(&v->val.arr.e[i]);
-            }
-            //释放数组内元素
-            free(v->val.arr.e);
-            break;
-        case SYJSON_OBJ:
-            for(i = 0;i < v->val.obj.s; i++)
-            {
-                //释放对象内成员key
-                free(v->val.obj.m[i].k);
-                //释放对象内成员
-                syjson_free(&v->val.obj.m[i].v);
-            }
-            free(v->val.obj.m);
-            break;
-        default:
-            break;
-    }
-    v->type = SYJSON_NULL;
-}
-//设置为真假
-void syjson_set_boolean(syjson_value* v, int boolean)
-{
-    assert(v != NULL && (boolean == SYJSON_TRUE || boolean == SYJSON_FALSE));
-    if(v->type == SYJSON_STR) free(v->val.str.s);
-    v->type = boolean;
-}
-//设置变量数字
-void syjson_set_number(syjson_value* v, double num)
-{
-    assert(v != NULL);
-    if(v->type == SYJSON_STR) free(v->val.str.s);
-    v->type = SYJSON_NUM;
-    v->val.num = num;
-}
-//从字符串栈写入值空间
-void syjson_set_string(syjson_value* v, const char* s, size_t len)
-{
-    assert(v != NULL && (s != NULL || len == 0));
-    syjson_free(v);
-    v->val.str.s = (char*)malloc(len + 1);
-    memcpy(v->val.str.s, s, len);
-    v->val.str.s[len] = '\0';
-    v->val.str.l = len;
-    v->type = SYJSON_STR;
-}
-//处理栈空间
-static void* syjson_content_push(syjson_content* c, size_t size)
-{
-    void* ret;
-    assert(size > 0);
-    //检查是否超出栈空间
-    if(c->top + size >= c->size)
-    {
-        //初始化栈空间
-        if(c->size == 0)
-            c->size = SYJSON_PARSE_STACK_INIT_SIZE;
-        //一点五倍增量增加栈空间可能回退至初次分配地址，减少内存碎片
-        while(c->top + size >= c->size)
-            c->size += c->size >> 1;
-        //申请堆内存，制作栈空间
-        c->stack = (char*) realloc(c->stack, c->size);
-    }
-    ret = c->stack + c->top;
-    c->top += size;
-    //返回栈顶地址
-    return ret;
-}
-//全部弹出栈
-static void* syjson_content_pop(syjson_content* c, size_t len)
-{
-    assert(c->top >= len);
-    //根据栈顶和长度返回当前出栈地址
-    return c->stack + (c->top -= len);
 }
 //解析JSON转码至UNICODE码点，int4字节存储
 static const char* syjson_parse_hex4(const char* p, unsigned* u)
@@ -228,7 +240,7 @@ static void syjson_encode_utf8(syjson_content* c, unsigned u)
         PUTC(c, ( u        & 0x3f) | 0x80);
     }
 }
-//解析字符串
+//写入字符串到值
 static int syjson_string_to_value(syjson_content* c, char** str, size_t* len)
 {
     size_t head = c->top;
@@ -299,7 +311,7 @@ static int syjson_string_to_value(syjson_content* c, char** str, size_t* len)
         }
     }
 }
-//写入字符串到值
+//解析字符串
 static int syjson_parse_string(syjson_content* c, syjson_value* v)
 {
     int ret;
@@ -312,20 +324,7 @@ static int syjson_parse_string(syjson_content* c, syjson_value* v)
     }
     return ret;
 }
-//值之后空白
-static int syjson_parse_root_not_singular(syjson_content* c, syjson_value* v)
-{
-    syjson_parse_whitespace(c);
-    if(*c->json == '\0')
-        return SYJSON_PARSE_OK;
-    else
-    {
-        v->type = SYJSON_NULL;
-        return SYJSON_PARSE_ROOT_NOT_SINGULAR;
-    }
-}
-
-//向前声明相互依赖
+//向前声明处理依赖
 static int syjson_parse_value(syjson_content* c, syjson_value* v);
 //解析数组
 static int syjson_parse_array(syjson_content* c, syjson_value* v)
@@ -380,6 +379,7 @@ static int syjson_parse_array(syjson_content* c, syjson_value* v)
 
     return ret;
 }
+//解析对象
 static int syjson_parse_object(syjson_content* c, syjson_value* v)
 {
     size_t i, size;
@@ -388,7 +388,7 @@ static int syjson_parse_object(syjson_content* c, syjson_value* v)
     EXPECT(c, '{');
     syjson_parse_whitespace(c);
     //空对象
-    if(c->json[0] == '}')
+    if(*c->json == '}')
     {
         c->json++;
         v->type = SYJSON_OBJ;
@@ -402,8 +402,12 @@ static int syjson_parse_object(syjson_content* c, syjson_value* v)
     {
         char* str;
         syjson_init(&m.v);
-        if(c->json[0] != '"')
+        if(*c->json != '"')
         {
+            char* ccc = (char*)malloc(32 + 1);
+            memcpy(ccc, (c->json-3), 32);
+            *(ccc+32) = '\0';
+            printf("aa\n%s\nbb\n%c\n", ccc, *c->json);
             ret = SYJSON_PARSE_MISS_KEY;
             break;
         }
@@ -501,6 +505,116 @@ int syjson_parse(syjson_value* v, const char* json)
 
     return ret;
 }
+
+
+static void syjson_stringify_string(syjson_content* c, const char* s, size_t len) {
+    assert(s != NULL);
+    size_t i, size;
+    char* head, *p;
+    static const char hex_digits[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+
+    p = head = syjson_content_push(c, size = len * 6 + 2); /* "\u00xx..." */
+    *p++ = '"';
+    for (i = 0; i < len; i++) {
+        unsigned char ch = (unsigned char)s[i];
+        switch (ch) {
+            case '\"': *p++ = '\\'; *p++ = '\"'; break;
+            case '\\': *p++ = '\\'; *p++ = '\\'; break;
+            case '\b': *p++ = '\\'; *p++ = 'b';  break;
+            case '\f': *p++ = '\\'; *p++ = 'f';  break;
+            case '\n': *p++ = '\\'; *p++ = 'n';  break;
+            case '\r': *p++ = '\\'; *p++ = 'r';  break;
+            case '\t': *p++ = '\\'; *p++ = 't';  break;
+            default:
+                if (ch < 0x20) {
+                    *p++ = '\\'; *p++ = 'u'; *p++ = '0'; *p++ = '0';
+                    *p++ = hex_digits[ch >> 4];
+                    *p++ = hex_digits[ch & 15];
+                }
+                else
+                    *p++ = s[i];
+        }
+    }
+    *p++ = '"';
+    c->top -= size - (p - head);
+}
+
+static void syjson_stringify_value(syjson_content* c, const syjson_value* v) {
+    size_t i;
+    switch (v->type) {
+        case SYJSON_NULL:   PUTS(c, "null",  4); break;
+        case SYJSON_FALSE:  PUTS(c, "false", 5); break;
+        case SYJSON_TRUE:   PUTS(c, "true",  4); break;
+        case SYJSON_NUM: c->top -= 32 - sprintf(syjson_content_push(c, 32), "%.17g", v->val.num); break;
+        case SYJSON_STR: syjson_stringify_string(c, v->val.str.s, v->val.str.l); break;
+        case SYJSON_ARR:
+            PUTC(c, '[');
+            for (i = 0; i < v->val.arr.s; i++) {
+                if (i > 0)
+                    PUTC(c, ',');
+                syjson_stringify_value(c, &v->val.arr.e[i]);
+            }
+            PUTC(c, ']');
+            break;
+        case SYJSON_OBJ:
+            PUTC(c, '{');
+            for (i = 0; i < v->val.obj.s; i++) {
+                if (i > 0)
+                    PUTC(c, ',');
+                syjson_stringify_string(c, v->val.obj.m[i].k, v->val.obj.m[i].kl);
+                PUTC(c, ':');
+                syjson_stringify_value(c, &v->val.obj.m[i].v);
+            }
+            PUTC(c, '}');
+            break;
+        default: assert(0 && "invalid type");
+    }
+}
+
+//数据逆向字符串化入口
+char* syjson_stringify(const syjson_value* v, size_t* length) {
+    syjson_content c;
+    assert(v != NULL);
+
+    c.stack = (char*)malloc(c.size = SYJSON_PARSE_STRINGIFY_INIT_SIZE);
+    c.top = 0;
+    syjson_stringify_value(&c, v);
+
+    if (length) *length = c.top;
+
+    PUTC(&c, '\0');
+
+    return c.stack;
+}
+
+
+//写入布尔值
+void syjson_set_boolean(syjson_value* v, int boolean)
+{
+    assert(v != NULL);
+    syjson_free(v);
+    v->type = boolean ? SYJSON_TRUE : SYJSON_FALSE;
+}
+//写入数字
+void syjson_set_number(syjson_value* v, double num)
+{
+    assert(v != NULL);
+    syjson_free(v);
+    v->type = SYJSON_NUM;
+    v->val.num = num;
+}
+//从字符串栈写入值空间
+void syjson_set_string(syjson_value* v, const char* s, size_t len)
+{
+    assert(v != NULL && (s != NULL || len == 0));
+    syjson_free(v);
+    v->val.str.s = (char*)malloc(len + 1);
+    memcpy(v->val.str.s, s, len);
+    v->val.str.s[len] = '\0';
+    v->val.str.l = len;
+    v->type = SYJSON_STR;
+}
+
 //返回json数据类型
 syjson_type syjson_get_type(const syjson_value* v)
 {
@@ -572,84 +686,4 @@ syjson_value* syjson_get_object_value(const syjson_value* v, size_t index)
     assert(v != NULL && v->type == SYJSON_OBJ);
     assert(index < v->val.obj.s);
     return &v->val.obj.m[index].v;
-}
-
-
-static void syjson_stringify_string(syjson_context* c, const char* s, size_t len) {
-    static const char hex_digits[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
-    size_t i, size;
-    char* head, *p;
-    assert(s != NULL);
-    p = head = syjson_context_push(c, size = len * 6 + 2); /* "\u00xx..." */
-    *p++ = '"';
-    for (i = 0; i < len; i++) {
-        unsigned char ch = (unsigned char)s[i];
-        switch (ch) {
-            case '\"': *p++ = '\\'; *p++ = '\"'; break;
-            case '\\': *p++ = '\\'; *p++ = '\\'; break;
-            case '\b': *p++ = '\\'; *p++ = 'b';  break;
-            case '\f': *p++ = '\\'; *p++ = 'f';  break;
-            case '\n': *p++ = '\\'; *p++ = 'n';  break;
-            case '\r': *p++ = '\\'; *p++ = 'r';  break;
-            case '\t': *p++ = '\\'; *p++ = 't';  break;
-            default:
-                if (ch < 0x20) {
-                    *p++ = '\\'; *p++ = 'u'; *p++ = '0'; *p++ = '0';
-                    *p++ = hex_digits[ch >> 4];
-                    *p++ = hex_digits[ch & 15];
-                }
-                else
-                    *p++ = s[i];
-        }
-    }
-    *p++ = '"';
-    c->top -= size - (p - head);
-}
-
-static void syjson_stringify_value(syjson_context* c, const syjson_value* v) {
-    size_t i;
-    switch (v->type) {
-        case SYJSON_NULL:   PUTS(c, "null",  4); break;
-        case SYJSON_FALSE:  PUTS(c, "false", 5); break;
-        case SYJSON_TRUE:   PUTS(c, "true",  4); break;
-        case SYJSON_NUM: c->top -= 32 - sprintf(syjson_context_push(c, 32), "%.17g", v->u.n); break;
-        case SYJSON_STR: syjson_stringify_string(c, v->u.s.s, v->u.s.len); break;
-        case SYJSON_ARR:
-            PUTC(c, '[');
-            for (i = 0; i < v->u.a.size; i++) {
-                if (i > 0)
-                    PUTC(c, ',');
-                syjson_stringify_value(c, &v->u.a.e[i]);
-            }
-            PUTC(c, ']');
-            break;
-        case SYJSON_OBJECT:
-            PUTC(c, '{');
-            for (i = 0; i < v->u.o.size; i++) {
-                if (i > 0)
-                    PUTC(c, ',');
-                syjson_stringify_string(c, v->u.o.m[i].k, v->u.o.m[i].klen);
-                PUTC(c, ':');
-                syjson_stringify_value(c, &v->u.o.m[i].v);
-            }
-            PUTC(c, '}');
-            break;
-        default: assert(0 && "invalid type");
-    }
-}
-
-//数据逆向字符串化入口
-char* syjson_stringify(const syjson_value* v, size_t* length) {
-    syjson_content c;
-    assert(v != NULL);
-
-    c.stack = (char*)malloc(c.size = SYJSON_PARSE_STRINGIFY_INIT_SIZE);
-    c.top = 0;
-    syjson_stringify_value(&c, v);
-
-    if (length) *length = c.top;
-
-    PUTC(&c, '\0');
-
-    return c.stack;
 }
