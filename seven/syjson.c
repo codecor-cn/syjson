@@ -57,6 +57,7 @@ static int syjson_parse_literal(syjson_content* c, syjson_value* v, const char* 
     v->type = type;
     return SYJSON_PARSE_OK;
 }
+//json字符串字面量转换double--字符分析兜底
 static int syjson_parse_number(syjson_content* c, syjson_value* v)
 {
     const char* p = c->json;
@@ -93,7 +94,7 @@ static int syjson_parse_number(syjson_content* c, syjson_value* v)
     v->type = SYJSON_NUM;
     return SYJSON_PARSE_OK;
 }
-//释放变量字符串空间 -- 也可以是 -- 初始化变量 set_null
+//释放栈空间
 void syjson_free(syjson_value* v)
 {
     assert(v != NULL);
@@ -103,10 +104,21 @@ void syjson_free(syjson_value* v)
         case SYJSON_STR:
             free(v->val.str.s);
             break;
+        case SYJSON_ARR:
+            for (i = 0; i < v->val.arr.s; i++)
+            {
+                //释放数组内元素
+                syjson_free(&v->val.arr.e[i]);
+            }
+            //释放数组内元素
+            free(v->val.arr.e);
+            break;
         case SYJSON_OBJ:
             for(i = 0;i < v->val.obj.s; i++)
             {
+                //释放对象内成员key
                 free(v->val.obj.m[i].k);
+                //释放对象内成员
                 syjson_free(&v->val.obj.m[i].v);
             }
             free(v->val.obj.m);
@@ -153,7 +165,7 @@ static void* syjson_content_push(syjson_content* c, size_t size)
         //初始化栈空间
         if(c->size == 0)
             c->size = SYJSON_PARSE_STACK_INIT_SIZE;
-        //以一点五倍增量增加栈空间
+        //一点五倍增量增加栈空间可能回退至初次分配地址，减少内存碎片
         while(c->top + size >= c->size)
             c->size += c->size >> 1;
         //申请堆内存，制作栈空间
@@ -168,7 +180,7 @@ static void* syjson_content_push(syjson_content* c, size_t size)
 static void* syjson_content_pop(syjson_content* c, size_t len)
 {
     assert(c->top >= len);
-    //这里的len为什么要跟head互换，直接传入head数值不行么
+    //根据栈顶和长度返回当前出栈地址
     return c->stack + (c->top -= len);
 }
 //解析JSON转码至UNICODE码点，int4字节存储
@@ -362,7 +374,7 @@ static int syjson_parse_array(syjson_content* c, syjson_value* v)
             break;
         }
     }
-    //弹出栈帧并释放空间
+    //释放空间弹出的栈帧空间
     for (i = 0; i < size; i++)
         syjson_free((syjson_value*)syjson_content_pop(c, sizeof(syjson_value)));
 
